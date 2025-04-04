@@ -3,6 +3,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth
 import { getUserTransactions, getUserBankAccounts, storeUserData } from "../firestoredb.js";
 import { GEMINI_API_KEY, GEMINI_MODEL } from "../config.js";
 import { getUserMonthlyIncome, determineIncomeLevel, getRecommendationsByIncome } from "../helpers.js";
+import { handleAPIError } from '../helpers.js';
 
 // Make function globally accessible
 window.loadPeraPartnerContent = loadPeraPartnerContent;
@@ -1580,10 +1581,11 @@ async function loadPeraPartnerContent() {
 
     } catch (error) {
         console.error("Error loading loan recommendations:", error);
+        const errorMessage = handleAPIError(error);
         contentContainer.innerHTML = `
             <div class="error-state">
                 <i class="fas fa-exclamation-circle"></i>
-                <p>An error occurred while analyzing your financial profile. Please try again later.</p>
+                <p>${errorMessage}</p>
                 <button class="action-button" onclick="loadPeraPartnerContent()">
                     <i class="fas fa-sync"></i> Retry
                 </button>
@@ -2339,14 +2341,16 @@ Respond with a structured recommendation including:
         if (!response.ok) {
             const errorData = await response.json();
             console.error('API response error:', errorData);
-            return generateFallbackRecommendations(financialData);
+            const errorMessage = handleAPIError(errorData, response);
+            throw new Error(errorMessage);
         }
 
         const data = await response.json();
 
         if (data.error) {
             console.error('API Error:', data.error);
-            return generateFallbackRecommendations(financialData);
+            const errorMessage = handleAPIError(data.error);
+            throw new Error(errorMessage);
         }
 
         // Extract response text from Gemini API format
@@ -2379,7 +2383,16 @@ Respond with a structured recommendation including:
         }
     } catch (error) {
         console.error('Error in advanced loan recommendations:', error);
-        return generateFallbackRecommendations(financialData);
+        const errorMessage = handleAPIError(error);
+        return {
+            loanOptions: [],
+            financialGuidance: [{
+                type: 'error',
+                title: 'Error Generating Loan Recommendations',
+                message: errorMessage,
+                action: 'Please try again later or contact support if the problem persists.'
+            }]
+        };
     }
 }
 
