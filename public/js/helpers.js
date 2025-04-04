@@ -657,4 +657,60 @@ export function validateInput(input, rules = {}) {
     }
     
     return result;
+}
+
+/**
+ * Handles API errors and returns appropriate user-friendly messages
+ * @param {Error} error - The error object
+ * @param {Object} response - The API response object (optional)
+ * @returns {string} A user-friendly error message
+ */
+export function handleAPIError(error, response = null) {
+    // Check for network-related errors
+    if (!navigator.onLine) {
+        return "You appear to be offline. Please check your internet connection and try again.";
+    }
+
+    // Handle API response errors
+    if (response) {
+        switch (response.status) {
+            case 400:
+                return "The request was invalid. Please check your input and try again.";
+            case 401:
+                return "Your session has expired. Please log in again.";
+            case 403:
+                return "You don't have permission to perform this action.";
+            case 404:
+                return "The requested resource was not found.";
+            case 429:
+                return "Too many requests. Please wait a moment and try again.";
+            case 500:
+                return "A server error occurred. Our team has been notified and is working on it.";
+            case 503:
+                return "The service is temporarily unavailable. Please try again later.";
+        }
+    }
+
+    // Handle specific API error codes
+    if (error.code) {
+        switch (error.code) {
+            case 'INVALID_ARGUMENT':
+                return "Invalid input provided. Please check your data and try again.";
+            case 'FAILED_PRECONDITION':
+                return "Unable to complete the action. Please ensure all requirements are met.";
+            case 'RESOURCE_EXHAUSTED':
+                return "Service temporarily unavailable due to high demand. Please try again later.";
+            case 'INTERNAL':
+                return "An internal error occurred. Our team has been notified.";
+            case 'UNAVAILABLE':
+                return "The service is currently unavailable. Please try again later.";
+            case 'UNAUTHENTICATED':
+                return "Your session has expired. Please log in again.";
+            case 'DEADLINE_EXCEEDED':
+                return "The request took too long to complete. Please try again.";
+        }
+    }
+
+    // Return a generic error message if no specific case is matched
+    return error.message || "An unexpected error occurred. Please try again later.";
 } 
