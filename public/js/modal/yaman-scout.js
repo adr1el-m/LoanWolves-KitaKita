@@ -2,6 +2,7 @@
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
 import { getUserTransactions, getUserBankAccounts } from "../firestoredb.js";
 import { GEMINI_API_KEY, GEMINI_MODEL } from "../config.js";
+import { handleAPIError } from '../helpers.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     // Get the yaman-scout tool element and add click event listener
@@ -951,14 +952,16 @@ Rules for recommendations:
         if (!response.ok) {
             const errorData = await response.json();
             console.error('API response error:', errorData);
-            return generateFallbackRecommendations(financialData);
+            const errorMessage = handleAPIError(errorData, response);
+            throw new Error(errorMessage);
         }
 
         const data = await response.json();
 
         if (data.error) {
             console.error('API Error:', data.error);
-            return generateFallbackRecommendations(financialData);
+            const errorMessage = handleAPIError(data.error);
+            throw new Error(errorMessage);
         }
 
         // Extract response text from Gemini API format
@@ -991,7 +994,16 @@ Rules for recommendations:
         }
     } catch (error) {
         console.error('Error generating recommendations:', error);
-        return generateFallbackRecommendations(financialData);
+        const errorMessage = handleAPIError(error);
+        return {
+            opportunities: [],
+            insights: [{
+                type: 'error',
+                title: 'Error Generating Recommendations',
+                description: errorMessage,
+                action: 'Please try again later or contact support if the problem persists.'
+            }]
+        };
     }
 }
 
