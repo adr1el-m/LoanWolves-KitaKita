@@ -63,16 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sendUserMessage();
     });
 
-    // Function to send user message
-    function sendUserMessage() {
-        const message = userInput.value.trim();
-        if (message) {
-            addMessage('user', message);
-            userInput.value = '';
-            getAIResponse(message);
-        }
-    }
-
     // Add message to chat
     function addMessage(sender, text) {
         const messageElement = document.createElement('div');
@@ -90,8 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
             messageElement.style.opacity = '1';
             messageElement.style.transform = 'translateY(0)';
         }, 10);
-        
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
     // Add suggestion buttons
@@ -113,7 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         chatMessages.appendChild(suggestionsContainer);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Function to send user message
+    function sendUserMessage() {
+        const message = userInput.value.trim();
+        if (message) {
+            addMessage('user', message);
+            userInput.value = '';
+            // Only scroll to bottom when user sends a message
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            getAIResponse(message);
+        }
     }
 
     // Get AI response
@@ -146,8 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
             
-            // Remove loading indicator
-            chatMessages.removeChild(loadingMessage);
+            // Remove loading indicator without scrolling
+            loadingMessage.remove();
             
             const data = await response.json();
             console.log('API Response:', data); // Log the full response for debugging

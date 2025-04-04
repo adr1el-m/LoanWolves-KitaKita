@@ -21,11 +21,19 @@ function getCurrentUserId() {
 }
 
 function validateUserAccess(requestUserId) {
-  const currentUserId = getCurrentUserId();
-  if (currentUserId !== requestUserId) {
-    throw new Error("Unauthorized access attempt");
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error("No authenticated user found");
+    }
+    if (user.uid !== requestUserId) {
+      throw new Error(`User ID mismatch: ${user.uid} vs ${requestUserId}`);
+    }
+    return true;
+  } catch (error) {
+    console.error('validateUserAccess error:', error);
+    throw new Error('Access validation failed: ' + error.message);
   }
-  return true;
 }
 
 // Store user data in Firestore
@@ -194,47 +202,94 @@ export async function deleteTransaction(userId, transactionId) {
 // Store bank account in Firestore
 export async function storeBankAccount(userId, accountData) {
     try {
+        console.log('Starting storeBankAccount with userId:', userId);
+        console.log('Account data to store:', accountData);
+        
         // Validate user is authorized to modify this data
-        validateUserAccess(userId);
+        try {
+            validateUserAccess(userId);
+        } catch (authError) {
+            console.error('Authorization error:', authError);
+            throw new Error('Authorization failed: ' + authError.message);
+        }
         
+        // Ensure balance is a number
+        const balance = parseFloat(accountData.balance);
+        if (isNaN(balance)) {
+            throw new Error('Invalid balance amount: must be a valid number');
+        }
+        
+        // Create a reference to the bank account document
         const docRef = doc(db, "users", userId, "bankAccounts", accountData.id);
+        console.log('Document reference created for path:', docRef.path);
         
-        // Add userId to account data for security rule validation
+        // Add userId and ensure balance is a number
         const securedAccountData = {
             ...accountData,
             userId,
+            balance: balance,
             timestamp: new Date().toISOString()
         };
         
-        await setDoc(docRef, securedAccountData);
-        console.log("Bank account stored in Firestore!");
-        return true;
+        console.log('Attempting to store secured account data:', securedAccountData);
+        
+        // Use setDoc to create/update the document
+        try {
+            await setDoc(docRef, securedAccountData);
+            console.log('Account successfully stored in Firestore at path:', docRef.path);
+            return true;
+        } catch (firestoreError) {
+            console.error('Firestore setDoc error:', firestoreError);
+            throw new Error('Failed to save to Firestore: ' + firestoreError.message);
+        }
     } catch (error) {
-        console.error("Error storing bank account:", error);
-        return false;
+        console.error('Error in storeBankAccount:', error);
+        throw error; // Re-throw to handle in the calling function
     }
 }
 
 // Get all bank accounts for a user
 export async function getUserBankAccounts(userId) {
     try {
+        console.log('Starting getUserBankAccounts for userId:', userId);
+        
         // Validate user is authorized to access this data
-        validateUserAccess(userId);
+        try {
+            validateUserAccess(userId);
+        } catch (authError) {
+            console.error('Authorization error:', authError);
+            throw new Error('Authorization failed: ' + authError.message);
+        }
         
         const accounts = [];
+        // Query the bankAccounts subcollection
         const accountsQuery = query(
             collection(db, "users", userId, "bankAccounts"),
             orderBy("timestamp", "desc")
         );
         
-        const querySnapshot = await getDocs(accountsQuery);
-        querySnapshot.forEach((doc) => {
-            accounts.push({ id: doc.id, ...doc.data() });
-        });
-        return accounts;
+        console.log('Querying accounts from path:', `users/${userId}/bankAccounts`);
+        
+        try {
+            const querySnapshot = await getDocs(accountsQuery);
+            console.log('Query snapshot size:', querySnapshot.size);
+            
+            querySnapshot.forEach((doc) => {
+                // Ensure balance is a number
+                const data = doc.data();
+                data.balance = parseFloat(data.balance) || 0;
+                accounts.push({ id: doc.id, ...data });
+            });
+            
+            console.log('Retrieved accounts:', accounts);
+            return accounts;
+        } catch (queryError) {
+            console.error('Error querying accounts:', queryError);
+            throw new Error('Failed to query accounts: ' + queryError.message);
+        }
     } catch (error) {
-        console.error("Error getting bank accounts:", error);
-        return [];
+        console.error('Error in getUserBankAccounts:', error);
+        throw error; // Re-throw to handle in the calling function
     }
 }
 

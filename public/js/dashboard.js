@@ -695,9 +695,39 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// First, let's modify the transaction form submission handler
+// Add Transaction Modal Handlers
+document.getElementById('add-transaction-button').addEventListener('click', function(e) {
+    e.preventDefault(); // Prevent default button behavior
+    const modal = document.getElementById('add-transaction-modal');
+    modal.style.display = 'flex';
+    
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('transaction-date').value = today;
+    
+    // Populate the account dropdown
+    populateAccountDropdown();
+});
+
+// Close transaction modal
+document.getElementById('close-add-transaction').addEventListener('click', function(e) {
+    e.preventDefault(); // Prevent default button behavior
+    const modal = document.getElementById('add-transaction-modal');
+    modal.style.display = 'none';
+    
+    // Reset the form when closing
+    const form = document.getElementById('add-transaction-form');
+    if (form) {
+        form.reset();
+        // Clear any validation errors
+        clearAllValidationErrors(form);
+    }
+});
+
+// Prevent form submission from scrolling
 document.getElementById('add-transaction-form').addEventListener('submit', async function(e) {
     e.preventDefault();
+    e.stopPropagation();
     
     try {
         const user = auth.currentUser;
@@ -720,70 +750,34 @@ document.getElementById('add-transaction-form').addEventListener('submit', async
         const accountField = document.getElementById('transaction-account');
         
         // Validate name (required)
-        const nameValidation = validateName(nameField.value, 'Transaction name');
-        if (!nameValidation.isValid) {
-            showValidationError(this, 'transaction-name', nameValidation.error);
-            nameField.focus();
+        if (!nameField || !nameField.value.trim()) {
+            showValidationError(nameField, 'Transaction name is required');
             return;
         }
         
         // Validate amount (required, must be a number)
-        const amountValidation = validateAmount(amountField.value);
-        if (!amountValidation.isValid) {
-            showValidationError(this, 'transaction-amount', amountValidation.error);
-            amountField.focus();
+        if (!amountField || !amountField.value.trim()) {
+            showValidationError(amountField, 'Amount is required');
             return;
         }
         
-        // Validate account is selected
-        if (!accountField.value) {
-            showValidationError(this, 'transaction-account', 'Please select an account');
-            accountField.focus();
+        const amount = parseFloat(amountField.value.trim());
+        if (isNaN(amount)) {
+            showValidationError(amountField, 'Please enter a valid amount');
             return;
         }
         
-        // Validate date (required, must be a valid date)
-        const dateValidation = validateDate(dateField.value);
-        if (!dateValidation.isValid) {
-            showValidationError(this, 'transaction-date', dateValidation.error);
-            dateField.focus();
+        // Validate account selection (can be "no_account" now)
+        if (!accountField || (!accountField.value && accountField.value !== "no_account")) {
+            showValidationError(accountField, 'Please select an account or "No Account"');
             return;
         }
         
-        // Validate time (optional, but must be valid if provided)
-        let timeValue = timeField && timeField.value ? timeField.value : '00:00';
-        if (timeField && timeField.value) {
-            if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(timeField.value)) {
-                showValidationError(this, 'transaction-time', 'Invalid time format (HH:MM)');
-                timeField.focus();
-                return;
-            }
-            timeValue = timeField.value;
+        // Validate date (required)
+        if (!dateField || !dateField.value) {
+            showValidationError(dateField, 'Date is required');
+            return;
         }
-        
-        // Get transaction type and amount
-        const transactionType = typeField ? sanitizeString(typeField.value) : 'expense';
-        const amount = amountValidation.value;
-        const transactionAmount = transactionType === 'expense' ? -amount : amount;
-        
-        // Get selected account
-        const accountId = sanitizeString(accountField.value);
-        
-        // Create the transaction data object with sanitized values
-        const transactionData = {
-            id: Date.now().toString(),
-            name: sanitizeString(nameValidation.value),
-            type: transactionType,
-            amount: transactionAmount,
-            accountId: accountId,
-            date: dateField.value, // Already validated
-            time: timeValue,
-            channel: channelField ? sanitizeString(channelField.value) : 'other',
-            category: categoryField ? sanitizeString(categoryField.value) : 'other',
-            notes: notesField ? sanitizeString(notesField.value) : '',
-            createdAt: new Date().toISOString(),
-            userId: user.uid
-        };
 
         // Submit button state
         const submitBtn = this.querySelector('button[type="submit"]');
@@ -791,103 +785,81 @@ document.getElementById('add-transaction-form').addEventListener('submit', async
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-        // Get the account to update its balance
-        const accounts = await getUserBankAccounts(user.uid);
-        const accountToUpdate = accounts.find(account => account.id === accountId);
-        
-        if (!accountToUpdate) {
-            throw new Error('Selected account not found');
-        }
-        
-        // Calculate new balance
-        const newBalance = parseFloat(accountToUpdate.balance) + transactionAmount;
-        
-        // Update account balance in Firestore
-        const accountUpdateSuccess = await updateBankAccount(user.uid, accountId, {
-            balance: newBalance,
-            lastUpdated: new Date().toISOString()
-        });
-        
-        if (!accountUpdateSuccess) {
-            throw new Error('Failed to update account balance');
+        // Only update account balance if an actual account is selected
+        if (accountField.value !== "no_account") {
+            // Get the account to update its balance
+            const accounts = await getUserBankAccounts(user.uid);
+            const accountToUpdate = accounts.find(acc => acc.id === accountField.value);
+            
+            if (!accountToUpdate) {
+                throw new Error('Selected account not found');
+            }
+
+            // Calculate transaction amount (negative for expense, positive for income)
+            const transactionAmount = typeField && typeField.value === 'income' ? Math.abs(amount) : -Math.abs(amount);
+
+            // Calculate new balance
+            const newBalance = parseFloat(accountToUpdate.balance) + transactionAmount;
+
+            // Update the account balance
+            const accountUpdateSuccess = await updateBankAccount(user.uid, accountField.value, {
+                balance: newBalance,
+                lastUpdated: new Date().toISOString()
+            });
+
+            if (!accountUpdateSuccess) {
+                throw new Error('Failed to update account balance');
+            }
         }
 
-        // Store transaction in Firestore
+        // Create the transaction data object
+        const transactionData = {
+            id: Date.now().toString(),
+            name: nameField.value.trim(),
+            type: typeField ? typeField.value : 'expense',
+            amount: typeField && typeField.value === 'income' ? Math.abs(amount) : -Math.abs(amount),
+            accountId: accountField.value === "no_account" ? null : accountField.value,
+            date: dateField.value,
+            time: timeField ? timeField.value : '00:00',
+            channel: channelField ? channelField.value : 'other',
+            category: categoryField ? categoryField.value : 'other',
+            notes: notesField ? notesField.value.trim() : '',
+            createdAt: new Date().toISOString(),
+            userId: user.uid,
+            isNoAccount: accountField.value === "no_account"
+        };
+
+        // Store the transaction
         const success = await storeTransaction(user.uid, transactionData);
         
         if (success) {
-            // Update UI
-            const tableBody = document.getElementById('transactions-table-body');
-            if (!tableBody) {
-                console.error('Table body element not found');
-                return;
-            }
-
-            const tableRow = document.createElement('tr');
-            tableRow.dataset.transactionId = transactionData.id;
-            
-            // Format date for display
-            const dateObj = new Date(`${transactionData.date}T${transactionData.time || '00:00'}`);
-            const formattedDate = dateObj.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-            });
-            
-            // Create the table row with properly sanitized values
-            tableRow.innerHTML = `
-                <td>${transactionData.name}</td>
-                <td class="${transactionData.amount >= 0 ? 'positive' : 'negative'}">
-                    ${transactionData.amount >= 0 ? '+' : '-'}₱${Math.abs(transactionData.amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </td>
-                <td><span class="transaction-type ${transactionData.amount >= 0 ? 'income' : 'expense'}">${transactionData.amount >= 0 ? 'Income' : 'Expense'}</span></td>
-                <td>${formattedDate}</td>
-                <td>${transactionData.channel}</td>
-                <td>${transactionData.category}</td>
-                <td class="actions">
-                    <button class="delete-transaction-btn" data-id="${transactionData.id}" style="opacity: 1 !important;">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            
-            // Add to beginning of table
-            if (tableBody.firstChild) {
-                tableBody.insertBefore(tableRow, tableBody.firstChild);
-            } else {
-                tableBody.appendChild(tableRow);
-            }
-            
-            // Hide empty state if visible
-            const emptyState = document.getElementById('transactions-empty-state');
-            if (emptyState) {
-                emptyState.style.display = 'none';
-            }
-            
             // Reset form and close modal
             this.reset();
             document.getElementById('add-transaction-modal').style.display = 'none';
 
-            // Reload all transactions to ensure everything is up to date
-            await loadTransactions();
+            // Update UI
+            await Promise.all([
+                loadTransactions(), // Reload transactions
+                renderBankCards()   // Update bank cards to show new balance
+            ]);
             
-            // Update bank cards to reflect new balance
-            await renderBankCards();
-
-            // Refresh financial health
-            refreshFinancialHealth();
+            // Update balance summary
+            updateBalanceSummary();
+            
+            // Show success message
+            alert('Transaction added successfully!');
         } else {
             throw new Error('Failed to store transaction');
         }
     } catch (error) {
         console.error('Error adding transaction:', error);
-        alert('Failed to add transaction. Please try again. Error: ' + error.message);
+        alert('Failed to add transaction: ' + error.message);
     } finally {
         // Reset submit button state
         const submitBtn = this.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = 'Add Transaction';
+            submitBtn.innerHTML = originalBtnText;
         }
     }
 });
@@ -1073,17 +1045,21 @@ async function populateAccountDropdown() {
             accountDropdown.remove(1);
         }
 
+        // Add "No Account" option
+        const noAccountOption = document.createElement('option');
+        noAccountOption.value = "no_account";
+        noAccountOption.textContent = "No Account (Cash Transaction)";
+        accountDropdown.appendChild(noAccountOption);
+
         // Get user's bank accounts
         const accounts = await getUserBankAccounts(user.uid);
         
-        // If no accounts, show a message
-        if (!accounts || accounts.length === 0) {
-            const option = document.createElement('option');
-            option.value = "";
-            option.textContent = "No accounts available - add one first";
-            option.disabled = true;
-            accountDropdown.appendChild(option);
-            return;
+        // Add a separator if there are accounts
+        if (accounts && accounts.length > 0) {
+            const separator = document.createElement('option');
+            separator.disabled = true;
+            separator.textContent = "──────────";
+            accountDropdown.appendChild(separator);
         }
 
         // Add each account as an option
@@ -1118,7 +1094,7 @@ document.getElementById('add-bank-form').addEventListener('submit', async functi
         // Clear any previous validation errors
         clearAllValidationErrors(this);
 
-        // Get form fields
+        // Get and validate form fields
         const accountTypeField = document.getElementById('account-type');
         const bankNameField = document.getElementById('bank-name');
         const cardNameField = document.getElementById('card-name');
@@ -1126,66 +1102,61 @@ document.getElementById('add-bank-form').addEventListener('submit', async functi
         const balanceField = document.getElementById('balance');
         const currencyField = document.getElementById('currency');
 
-        // Validate balance (required, must be a number)
-        const balanceValidation = validateAmount(balanceField.value);
-        if (!balanceValidation.isValid) {
-            showValidationError(this, 'balance', balanceValidation.error);
-            balanceField.focus();
-            return;
+        // Validate balance
+        if (!balanceField || !balanceField.value) {
+            throw new Error('Balance is required');
+        }
+
+        const balance = parseFloat(balanceField.value);
+        if (isNaN(balance)) {
+            throw new Error('Invalid balance amount');
         }
 
         // Submit button state
         const submitBtn = this.querySelector('button[type="submit"]');
-        const originalBtnText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Account...';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Account...';
+        }
 
-        // Generate a unique ID
-        const accountId = Date.now().toString();
-        
-        // Set some default values for optional fields
-        const accountName = bankNameField && bankNameField.value.trim() ? bankNameField.value.trim() : 'My Account';
-        const cardName = cardNameField && cardNameField.value.trim() ? cardNameField.value.trim() : 'Account Owner';
-        const cardNumber = cardNumberField && cardNumberField.value.trim() ? cardNumberField.value.trim() : '0000000000000000';
-        
-        // Get form values with sanitization
+        // Prepare account data
+        const accountId = `acc_${Date.now()}`;
         const accountData = {
             id: accountId,
-            accountType: sanitizeString(accountTypeField?.value || 'bank'),
-            currency: sanitizeString(currencyField?.value || 'PHP'),
-            cardNumber: sanitizeString(cardNumber),
-            cardName: sanitizeString(cardName),
-            balance: balanceValidation.value,
+            accountType: accountTypeField?.value || 'bank',
+            currency: currencyField?.value || 'PHP',
+            cardNumber: cardNumberField?.value?.trim() || '0000000000000000',
+            cardName: cardNameField?.value?.trim() || 'Account Owner',
+            balance: balance,
             createdAt: new Date().toISOString(),
             userId: user.uid,
-            accountName: sanitizeString(accountName)
+            accountName: bankNameField?.value?.trim() || 'My Account'
         };
 
         // Store in Firestore
-        const success = await storeBankAccount(user.uid, accountData);
-        
-        if (success) {
-            // Reset form
-            this.reset();
+        await storeBankAccount(user.uid, accountData);
 
-            // Close modal
-            const modal = document.getElementById('add-bank-modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-
-            // Update UI
-            await renderBankCards();
-
-            // Refresh financial health
-            refreshFinancialHealth();
-        } else {
-            throw new Error('Failed to add account');
+        // Reset form and close modal
+        this.reset();
+        const modal = document.getElementById('add-bank-modal');
+        if (modal) {
+            modal.style.display = 'none';
         }
 
+        // Update UI
+        await renderBankCards();
+        
+        // Give the DOM time to update before calculating totals
+        requestAnimationFrame(() => {
+            updateBalanceSummary();
+        });
+
+        // Show success message
+        alert('Account added successfully!');
+
     } catch (error) {
-        console.error('Error in form submission:', error);
-        alert('Failed to add account: ' + error.message);
+        console.error('Error adding account:', error);
+        alert(error.message || 'Failed to add account');
     } finally {
         // Reset submit button state
         const submitBtn = this.querySelector('button[type="submit"]');
@@ -1326,31 +1297,44 @@ function formatDate(date) {
 }
 
 function updateBalanceSummary() {
-    // Get all bank cards except the add-card
-    const bankCards = Array.from(document.querySelectorAll('.bank-cards-grid .bank-card')).filter(card => !card.classList.contains('add-card'));
-    
-    let totalBalance = 0;
-    let count = bankCards.length;
-    
-    bankCards.forEach(card => {
-        const balanceElement = card.querySelector('.balance');
-        if (balanceElement) {
-            const balanceText = balanceElement.textContent;
-            const balance = parseFloat(balanceText.replace(/[₱,]/g, ''));
-            if (!isNaN(balance)) {
-                totalBalance += balance;
+    try {
+        // Get all bank cards except the add-card
+        const bankCards = document.querySelectorAll('.bank-card:not(.add-card)');
+        
+        let totalBalance = 0;
+        let count = 0;
+        
+        // Convert NodeList to Array and iterate
+        Array.from(bankCards).forEach(card => {
+            if (card instanceof Element) {  // Type check the node
+                const balanceElement = card.querySelector('.balance');
+                if (balanceElement && balanceElement.textContent) {
+                    // Remove currency symbol, commas, and spaces, then parse
+                    const balanceText = balanceElement.textContent.trim();
+                    const balance = parseFloat(balanceText.replace(/[₱,\s]/g, ''));
+                    if (!isNaN(balance)) {
+                        totalBalance += balance;
+                        count++;
+                    }
+                }
             }
+        });
+        
+        // Update the summary displays
+        const totalBalanceElement = document.getElementById('total-balance-amount');
+        if (totalBalanceElement) {
+            totalBalanceElement.textContent = `₱${totalBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         }
-    });
-    
-    // Update the summary displays with new styling
-    if (document.getElementById('total-balance-amount')) {
-        document.getElementById('total-balance-amount').textContent = 
-            `₱${totalBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    }
-    
-    if (document.getElementById('total-accounts')) {
-        document.getElementById('total-accounts').textContent = count;
+        
+        const totalAccountsElement = document.getElementById('total-accounts');
+        if (totalAccountsElement) {
+            totalAccountsElement.textContent = count.toString();
+        }
+
+        console.log('Balance summary updated:', { totalBalance, count });
+    } catch (error) {
+        console.error('Error updating balance summary:', error);
+        // Don't throw the error - just log it to prevent form submission from failing
     }
 }
 
@@ -1549,7 +1533,9 @@ function showTransactionDetails(transactionId, transactions) {
     
     // Display account information if available
     const accountElement = document.getElementById('view-transaction-account');
-    if (transaction.accountId) {
+    if (transaction.isNoAccount || !transaction.accountId) {
+        accountElement.textContent = 'No Account (Cash Transaction)';
+    } else {
         // Try to get account name from active accounts
         getUserBankAccounts(auth.currentUser.uid).then(accounts => {
             const account = accounts.find(a => a.id === transaction.accountId);
@@ -1562,8 +1548,6 @@ function showTransactionDetails(transactionId, transactions) {
             console.error('Error getting account details:', err);
             accountElement.textContent = 'Account ID: ' + transaction.accountId;
         });
-    } else {
-        accountElement.textContent = 'N/A';
     }
     
     // Display the formatted date
@@ -1696,23 +1680,6 @@ function requestAuthentication(onSuccess) {
     }
   });
 }
-
-// Add Transaction Modal Handlers
-document.getElementById('add-transaction-button').addEventListener('click', function() {
-    document.getElementById('add-transaction-modal').style.display = 'flex';
-    
-    // Set default date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('transaction-date').value = today;
-    
-    // Populate the account dropdown
-    populateAccountDropdown();
-});
-
-// Add event listener to show/hide transaction modal
-document.getElementById('close-add-transaction').addEventListener('click', function() {
-    document.getElementById('add-transaction-modal').style.display = 'none';
-});
 
 // Add event listener to re-populate account dropdown when transaction type changes
 document.getElementById('transaction-type').addEventListener('change', function() {

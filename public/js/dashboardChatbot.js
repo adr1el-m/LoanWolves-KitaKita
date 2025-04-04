@@ -181,6 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (message) {
             addMessage('user', message);
             userInput.value = '';
+            // Only scroll to bottom when user sends a message
+            chatMessages.scrollTop = chatMessages.scrollHeight;
             getAIResponse(message);
         }
     }
@@ -197,13 +199,11 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.style.opacity = '0';
         messageElement.style.transform = 'translateY(20px)';
         
-        // Apply animations
+        // Apply animations without scrolling
         setTimeout(() => {
             messageElement.style.opacity = '1';
             messageElement.style.transform = 'translateY(0)';
         }, 10);
-        
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
     
     // Add suggestion buttons
@@ -218,6 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             button.addEventListener('click', () => {
                 addMessage('user', suggestion);
+                // Scroll to bottom when suggestion is clicked
+                chatMessages.scrollTop = chatMessages.scrollHeight;
                 getAIResponse(suggestion);
             });
             
@@ -225,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         chatMessages.appendChild(suggestionsContainer);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
     
     // Get AI response based on user message and data
