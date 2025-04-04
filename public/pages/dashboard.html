@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#060e21">
+    <title>AI Banking Dashboard</title>
+    <link rel="stylesheet" href="../../src/index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+        // Import Firebase auth and make it globally available
+        import { getAuth } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { firebaseConfig } from "../js/config.js";
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        
+        // Listen for auth state changes
+        window.auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is logged in, load profile data
+                if (typeof loadFinancialProfileData === 'function') {
+                    loadFinancialProfileData();
+                }
+                if (typeof loadPersonalProfileData === 'function') {
+                    loadPersonalProfileData();
+                }
+            }
+        });
+    </script>
+    <script type="module" src="../js/dashboard.js" defer></script>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/profile.css">
+    <link rel="stylesheet" href="../css/mata-gastos.css">
+    <link rel="stylesheet" href="../css/credit-companion.css">
+    <link rel="stylesheet" href="../css/financial-access.css">
+    <style>
+        .delete-transaction-btn {
+            background: rgba(255, 59, 48, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            opacity: 1;
+        }
+
+        .delete-transaction-btn i {
+            color: #ff3b30;
+            font-size: 14px;
+        }
+
+        .delete-transaction-btn:hover {
+            background: rgba(255, 59, 48, 0.2);
+            transform: scale(1.1);
+        }
+
+        .transactions-table td.actions {
+            width: 50px;
+            text-align: center;
+        }
+
+        .transactions-table tr:hover .delete-transaction-btn {
+            opacity: 1;
+        }
+
+        .delete-transaction-btn {
+            opacity: 1;
+        }
+        
+        /* Center the floating action button */
+        .floating-action-button {
+            position: fixed;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #10df6f, #0ea55d);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 10px 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(16, 223, 111, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 100;
+            width: auto;
+            max-width: 180px;
+            justify-content: center;
+        }
+
+        .floating-action-button:hover {
+            transform: translateX(-50%);
+            box-shadow: 0 6px 18px rgba(16, 223, 111, 0.4);
+        }
+
+        .floating-action-button i {
+            font-size: 14px;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background-color: #121c2e;
+            border-radius: 12px;
+            width: 95%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        .wider-modal {
+            max-width: 800px;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .modal-header h2 i {
+            color: #10df6f;
+        }
+        
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .modal-close-btn:hover {
+            color: #fff;
+        }
+        
+        /* Add padding for modal content */
+        #mata-gastos-modal-content,
+        #yaman-scout-modal-content,
+        #pera-partner-modal-content,
+        #fraud-shield-modal-content,
+        #credit-companion-modal-content {
+            padding: 1.5rem;
+            color: #fff;
+        }
+        
+        /* Ensure content inside modals is visible */
+        .mata-gastos-container {
+            color: #fff;
+        }
+        
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: auto auto;
+            gap: 1.5rem;
+        }
+        
+        .financial-health-card {
+            grid-column: span 12;
+            grid-row: 1;
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(33, 150, 243, 0.05));
+            border-left: 3px solid #2196F3;
+        }
+        
+        .spending-chart-container {
+            grid-column: span 6;
+            grid-row: 2;
+            height: 100%;
+        }
+        
+        .dashboard-card:nth-child(3) {
+            grid-column: span 6;
+            grid-row: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .dashboard-card:nth-child(3) .transactions-list {
+            flex: 1;
+            overflow: hidden;
+            max-height: none;
+        }
+        
+        /* Make forecast card full width */
+        .forecast-card {
+            grid-column: span 12;
+        }
+        
+        /* Limit recent transactions to 4 items without scrolling */
+        #recent-transactions .transaction-item:nth-child(n+5) {
+            display: none;
+        }
+        
+        /* Style for transaction items in dashboard */
+        .transaction-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        .transaction-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .transaction-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+        }
+        
+        .transaction-details {
+            flex: 1;
+        }
+        
+        .transaction-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        
+        .transaction-date {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .transaction-amount {
+            font-weight: 600;
+        }
+        
+        .transaction-amount.positive {
+            color: #10df6f;
+        }
+        
+        .transaction-amount.negative {
+            color: #ff3b30;
+        }
+        
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dashboard-card h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .dashboard-card h2 i {
+            margin-right: 0.5rem;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 1024px) {
+            .financial-health-card {
+                grid-column: span 12;
+                grid-row: 1;
+            }
+            .spending-chart-container {
+                grid-column: span 12;
+                grid-row: 2;
+            }
+            .dashboard-card:nth-child(3) {
+                grid-column: span 12;
+                grid-row: 3;
+            }
+        }
+        
+        /* Financial Health Widget Styles */
+        .financial-health-content {
+            padding: 1rem 0;
+        }
+        
+        .financial-health-score {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        .score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-right: 1rem;
+            background: conic-gradient(var(--score-color, #2196F3) var(--score-percent), rgba(33, 150, 243, 0.1) var(--score-percent));
+            position: relative;
+        }
+        
+        .score-circle::before {
+            content: '';
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #121c2e;
+        }
+        
+        .score-value {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .score-details {
+            flex: 1;
+        }
+        
+        .score-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 0.25rem;
+        }
+        
+        .score-description {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .financial-insights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            height: 100%;
+        }
+        
+        .insight-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        .insight-icon.positive {
+            background: rgba(16, 223, 111, 0.2);
+            color: #10df6f;
+        }
+        
+        .insight-icon.negative {
+            background: rgba(255, 59, 48, 0.2);
+            color: #ff3b30;
+        }
+        
+        .insight-icon.neutral {
+            background: rgba(255, 204, 0, 0.2);
+            color: #ffcc00;
+        }
+        
+        .insight-content {
+            flex: 1;
+        }
+        
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+        
+        .pulse-loader {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(33, 150, 243, 0.2);
+            animation: pulse 1.5s infinite ease-in-out;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+        }
+        
+        .refresh-button {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(30deg);
+        }
+        
+        .suggestion-container {
+            background: rgba(16, 223, 111, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 3px solid #10df6f;
+        }
+        
+        .suggestion-container h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .suggestion-container h3 i {
+            color: #10df6f;
+            margin-right: 0.5rem;
+        }
+        
+        .suggestion-container p {
+            margin: 0;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Monthly Income Form Styles */
+        .currency-input-container {
+            position: relative;
+        }
+        
+        .currency-symbol {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .currency-input-container input {
+            padding-left: 20px;
+        }
+        
+        .primary-button {
+            background: linear-gradient(135deg, #10df6f, #0ea55d);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 10px 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(16, 223, 111, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: auto;
+            max-width: 180px;
+            justify-content: center;
+        }
+        
+        .primary-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(16, 223, 111, 0.4);
+        }
+        
+        .primary-button:disabled {
+            background: rgba(16, 223, 111, 0.5);
+            cursor: not-allowed;
+        }
+        
+        .primary-button i {
+            font-size: 14px;
+        }
+        
+        /* Notification Messages */
+        .success-message, 
+        .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            backdrop-filter: blur(10px);
+            max-width: 350px;
+            transition: opacity 0.5s ease;
+        }
+        
+        .success-message {
+            background: rgba(16, 223, 111, 0.9);
+            color: white;
+            border-left: 4px solid #0ea55d;
+        }
+        
+        .error-message {
+            background: rgba(255, 59, 48, 0.9);
+            color: white;
+            border-left: 4px solid #d32f2f;
+        }
+        
+        .success-message i,
+        .error-message i {
+            font-size: 1.25rem;
+        }
+        
+        .fade-out {
+            opacity: 0;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Form Actions */
+        .form-actions {
+            margin-top: 15px;
+            margin-bottom: 30px;
+        }
+
+        /* Add this new style for transaction types */
+        .transaction-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .transaction-type.income {
+            background: rgba(16, 223, 111, 0.15);
+            color: #10df6f;
+        }
+
+        .transaction-type.expense {
+            background: rgba(255, 149, 0, 0.15);
+            color: #ff9500;
+        }
+
+        .delete-transaction-btn {
+            opacity: 0;
+        }
+
+        /* Style for dropdown options */
+        select option {
+            background-color: #121c2e;
+            color: white;
+        }
+        
+        /* Additional styling for select elements */
+        select {
+            background-color: #121c2e;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Fix for modal horizontal scrollbars */
+        .modal-content, 
+        .modal-content.wider-modal,
+        .modal-body,
+        #pera-partner-modal-content,
+        #fraud-shield-modal-content,
+        #credit-companion-modal-content,
+        #financial-access-modal-content,
+        #yaman-scout-modal-content,
+        #mata-gastos-modal-content {
+            overflow-x: hidden !important;
+            max-width: 100% !important;
+        }
+        
+        /* Control width of all children inside modal content */
+        .modal-content > div,
+        .modal-content > div > div,
+        .modal-body > div {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Ensure all grid-based content respects container width */
+        .compliance-analysis-container,
+        .loan-assistance-container,
+        .credit-companion-container,
+        .fraud-shield-container,
+        .yaman-scout-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Custom scrollbar styling */
+        .modal-content, 
+        .wider-modal,
+        .modal-body,
+        #pera-partner-modal-content,
+        #fraud-shield-modal-content,
+        #credit-companion-modal-content,
+        #financial-access-modal-content,
+        #yaman-scout-modal-content,
+        #mata-gastos-modal-content {
+            /* Firefox scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(16, 223, 111, 0.5) rgba(30, 30, 30, 0.1);
+            
+            /* Smooth scrolling */
+            scroll-behavior: smooth;
+        }
+        
+        /* Webkit scrollbar styling (Chrome, Safari, Edge) */
+        .modal-content::-webkit-scrollbar, 
+        .wider-modal::-webkit-scrollbar,
+        .modal-body::-webkit-scrollbar,
+        #pera-partner-modal-content::-webkit-scrollbar,
+        #fraud-shield-modal-content::-webkit-scrollbar,
+        #credit-companion-modal-content::-webkit-scrollbar,
+        #financial-access-modal-content::-webkit-scrollbar,
+        #yaman-scout-modal-content::-webkit-scrollbar,
+        #mata-gastos-modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .modal-content::-webkit-scrollbar-track,
+        .wider-modal::-webkit-scrollbar-track,
+        .modal-body::-webkit-scrollbar-track,
+        #pera-partner-modal-content::-webkit-scrollbar-track,
+        #fraud-shield-modal-content::-webkit-scrollbar-track,
+        #credit-companion-modal-content::-webkit-scrollbar-track,
+        #financial-access-modal-content::-webkit-scrollbar-track,
+        #yaman-scout-modal-content::-webkit-scrollbar-track,
+        #mata-gastos-modal-content::-webkit-scrollbar-track {
+            background: rgba(30, 30, 30, 0.1);
+            border-radius: 4px;
+        }
+        
+        .modal-content::-webkit-scrollbar-thumb,
+        .wider-modal::-webkit-scrollbar-thumb,
+        .modal-body::-webkit-scrollbar-thumb,
+        #pera-partner-modal-content::-webkit-scrollbar-thumb,
+        #fraud-shield-modal-content::-webkit-scrollbar-thumb,
+        #credit-companion-modal-content::-webkit-scrollbar-thumb,
+        #financial-access-modal-content::-webkit-scrollbar-thumb,
+        #yaman-scout-modal-content::-webkit-scrollbar-thumb,
+        #mata-gastos-modal-content::-webkit-scrollbar-thumb {
+            background: rgba(16, 223, 111, 0.5);
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+        
+        .modal-content::-webkit-scrollbar-thumb:hover,
+        .wider-modal::-webkit-scrollbar-thumb:hover,
+        .modal-body::-webkit-scrollbar-thumb:hover,
+        #pera-partner-modal-content::-webkit-scrollbar-thumb:hover,
+        #fraud-shield-modal-content::-webkit-scrollbar-thumb:hover,
+        #credit-companion-modal-content::-webkit-scrollbar-thumb:hover,
+        #financial-access-modal-content::-webkit-scrollbar-thumb:hover,
+        #yaman-scout-modal-content::-webkit-scrollbar-thumb:hover,
+        #mata-gastos-modal-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 223, 111, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <!-- Light Effects -->
+    <div class="light light-1"></div>
+    <div class="light light-2"></div>
+    <div class="light light-3"></div>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo" style="padding: 0 2rem 2rem;">Kita-kita</div>
+            <ul class="sidebar-nav">
+                <li>
+                    <a href="#" class="active" data-page="home">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-page="banks">
+                        <i class="fas fa-wallet"></i> Balances
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-page="transactions">
+                        <i class="fas fa-history"></i> Transaction History
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-page="kita-companions">
+                        <i class="fas fa-robot"></i> Kita Companions
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-page="profile">
+                        <i class="fas fa-user"></i> Profile
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- User info at bottom of sidebar -->
+            <div class="sidebar-footer">
+                <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="user-display-name" class="user-name">Loading...</span>
+                    </a>
+                    <button id="logout-button" class="logout-button">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Home Page (Dashboard) -->
+            <div class="page-content" id="home-page">
+                <!-- Welcome Banner with floating animation -->
+                <div class="welcome-banner">
+                    <h1>Welcome, <span id="welcomeUsername">User</span>!</h1>
+                    <p>Your financial dashboard is ready.</p>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <!-- Financial Health Widget -->
+                    <div class="dashboard-card financial-health-card">
+                        <h2><i class="fas fa-heartbeat"></i> Financial Health</h2>
+                        <div class="financial-health-content" id="financial-health-content">
+                            <div class="loading-state">
+                                <div class="pulse-loader"></div>
+                                <p>Analyzing your financial data...</p>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <!-- Spending Chart -->
+                    <div class="dashboard-card spending-chart-container">
+                        <h2><i class="fas fa-chart-line"></i> Weekly Spending Overview</h2>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="spendingChart"></canvas>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h2><i class="fas fa-receipt"></i> Recent Transactions</h2>
+                        <div class="transactions-list" id="recent-transactions">
+                            <p class="empty-state">No recent transactions to display</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Financial Forecast Section (moved to bottom) -->
+                    <div class="dashboard-card forecast-card">
+                        <h2><i class="fas fa-chart-line"></i> Financial Forecast</h2>
+                        <div id="forecast-section">
+                            <div class="loading-state">
+                                <div class="pulse-loader"></div>
+                                <p>Generating your financial forecast...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-content" id="banks-page" style="display: none;">
+                <div class="page-header">
+                    <h1>Account Balances</h1>
+                    <button id="add-bank-button" class="primary-button" style="display: none;">
+                        <i class="fas fa-plus"></i> Add New Account
+                    </button>
+                </div>
+                
+                <!-- Total Balance Summary at the top -->
+                <div class="balance-summary-container">
+                    <div class="balance-summary-content">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Balance</span>
+                            <span class="summary-value" id="total-balance-amount">₱0.00</span>
+                        </div>
+                        <div class="summary-divider"></div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Accounts</span>
+                            <span class="summary-value" id="total-accounts">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bank cards grid -->
+                <div class="bank-cards-grid" style="display: none;">
+                    <!-- Bank cards will be dynamically added here -->
+                </div>
+
+                <!-- Empty state message for bank cards -->
+                <div id="banks-empty-state" class="empty-state-container" style="text-align: center; padding: 2rem;">
+                    <div class="empty-state-content">
+                        <i class="fas fa-university empty-state-icon" style="font-size: 3rem; color: rgba(255, 255, 255, 0.3);"></i>
+                        <h3>No accounts added yet</h3>
+                        <p class="empty-state-subtitle">Add your first account to start tracking your finances</p>
+                        <button id="empty-add-bank-button" class="action-button" style="margin-top: 1rem;">
+                            <i class="fas fa-plus"></i> Add Account
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add Bank Modal - Enhanced version -->
+                <div id="add-bank-modal" class="modal">
+                    <div class="modal-content wider-modal">
+                        <div class="modal-header">
+                            <h2><i class="fas fa-university"></i> Add New Account</h2>
+                            <button class="modal-close-btn" id="close-add-bank">×</button>
+                        </div>
+                        <form id="add-bank-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Account Type</label>
+                                    <select id="account-type">
+                                        <option value="bank">Bank Account</option>
+                                        <option value="ewallet">E-Wallet</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Currency</label>
+                                    <select id="currency" name="currency">
+                                        <option value="PHP">PHP (Philippine Peso)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div id="bank-fields">
+                                <div class="form-group">
+                                    <label>Bank Name</label>
+                                    <input type="text" id="bank-name">
+                                </div>
+                            </div>
+                            
+                            <div id="ewallet-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label>E-Wallet Provider</label>
+                                    <select id="ewallet-provider">
+                                        <option value="paypal">PayPal</option>
+                                        <option value="gcash">GCash</option>
+                                        <option value="paymaya">PayMaya</option>
+                                        <option value="seabank">SeaBank</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="other-provider-field" style="display: none;">
+                                    <label>Specify Provider</label>
+                                    <input type="text" id="other-provider">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label id="number-label">Card Number</label>
+                                <input type="text" id="card-number">
+                            </div>
+                            <div class="form-group">
+                                <label>Name on Card/Account</label>
+                                <input type="text" id="card-name">
+                            </div>
+                            <div class="form-group">
+                                <label>Current Balance</label>
+                                <div class="currency-input-container">
+                                    <span id="currency-symbol">₱</span>
+                                    <input type="number" id="balance" step="0.01">
+                                </div>
+                            </div>
+                            <div class="modal-actions">
+                                <button type="submit" class="action-button">Add Account</button>
+                                <button type="button" class="cancel-button" id="cancel-add-bank">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction History Page -->
+            <div class="page-content" id="transactions-page" style="display: none;">
+                <h1>Transaction History</h1>
+                <table class="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Transaction</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Channel</th>
+                            <th>Category</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-table-body">
+                        <!-- Transactions will be dynamically loaded -->
+                    </tbody>
+                </table>
+                
+                <!-- Empty state message -->
+                <div id="transactions-empty-state" class="empty-state-container">
+                    <p>No transaction history available</p>
+                </div>
+                
+                <!-- Add Transaction Button -->
+                <button id="add-transaction-button" class="floating-action-button">
+                    <i class="fas fa-plus"></i> Add Transaction
+                </button>
+                
+                <!-- Add Transaction Modal -->
+                <div id="add-transaction-modal" class="modal">
+                    <div class="modal-content wider-modal">
+                        <div class="modal-header">
+                            <h2><i class="fas fa-exchange-alt"></i> Add New Transaction</h2>
+                            <button class="modal-close-btn" id="close-add-transaction">×</button>
+                        </div>
+                        <form id="add-transaction-form">
+                            <div class="form-group">
+                                <label>Transaction Name</label>
+                                <input type="text" id="transaction-name" placeholder="E.g., Grocery Store, Utility Bill" required>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Type</label>
+                                    <select id="transaction-type" required>
+                                        <option value="expense">Expense</option>
+                                        <option value="income">Income</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Amount</label>
+                                    <div class="currency-input-container">
+                                        <span id="transaction-currency-symbol">₱</span>
+                                        <input type="number" id="transaction-amount" step="0.01" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Account</label>
+                                <select id="transaction-account" required>
+                                    <option value="">-- Select Account --</option>
+                                    <!-- Account options will be populated dynamically -->
+                                </select>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Date</label>
+                                    <input type="date" id="transaction-date" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Time</label>
+                                    <input type="time" id="transaction-time">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Channel</label>
+                                    <select id="transaction-channel" required>
+                                        <option value="online">Online</option>
+                                        <option value="in-store">In Store</option>
+                                        <option value="transfer">Bank Transfer</option>
+                                        <option value="mobile">Mobile</option>
+                                        <option value="atm">ATM</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Category</label>
+                                    <select id="transaction-category" required>
+                                        <option value="food">Food & Drink</option>
+                                        <option value="shopping">Shopping</option>
+                                        <option value="bills">Bills & Utilities</option>
+                                        <option value="transportation">Transportation</option>
+                                        <option value="entertainment">Entertainment</option>
+                                        <option value="housing">Housing</option>
+                                        <option value="health">Health</option>
+                                        <option value="education">Education</option>
+                                        <option value="income">Income</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Notes (Optional)</label>
+                                <textarea id="transaction-notes" rows="2"></textarea>
+                            </div>
+                            
+                            <div class="modal-actions">
+                                <button type="submit" class="action-button">Add Transaction</button>
+                                <button type="button" class="cancel-button" id="cancel-add-transaction">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kita Companions Page -->
+            <div class="page-content" id="kita-companions-page" style="display: none;">
+                <h1>Kita Companions</h1>
+                
+                <div class="ai-tools-grid">
+                    <!-- Top Row -->
+                    <div class="ai-tool-card" id="mata-gastos-tool">
+                        <div class="tool-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3>Gabay Gastos</h3>
+                        <p>Your vigilant AI companion that watches your spending patterns and provides personalized insights to help you make smarter financial decisions</p>
+                    </div>
+
+                    <div class="ai-tool-card" id="yaman-scout-tool">
+                        <div class="tool-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3>Dunong Puhunan</h3>
+                        <p>Scout the best investment opportunities with AI-powered analysis and future-focused recommendations</p>
+                    </div>
+
+                    <div class="ai-tool-card" id="pera-partner-tool">
+                        <div class="tool-icon">
+                            <i class="fas fa-piggy-bank"></i>
+                        </div>
+                        <h3>Bantay Utang</h3>
+                        <p>Your trusted AI advisor for loan decisions, helping you navigate borrowing options and repayment strategies</p>
+                    </div>
+                    
+                    <!-- Second Row -->
+                    <div class="ai-tool-card" id="fraud-shield-tool">
+                        <div class="tool-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h3>Iwas Scam</h3>
+                        <p>AI-powered transaction monitoring to detect and prevent fraudulent activity</p>
+                    </div>
+                    
+                    <div class="ai-tool-card" id="credit-companion-tool">
+                        <div class="tool-icon">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <h3>Tiwala Score</h3>
+                        <p>Alternative credit scoring using AI to evaluate your financial behaviors beyond traditional metrics</p>
+                    </div>
+                    
+                    <div class="ai-tool-card" id="financial-access-tool">
+                        <div class="tool-icon">
+                            <i class="fas fa-hands-helping"></i>
+                        </div>
+                        <h3>Patunay Check</h3>
+                        <p>AI-powered KYC verification and compliance monitoring</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div class="page-content" id="profile-page" style="display: none;">
+                <div id="password-setup-notice" class="alert-banner" style="display: none; background: rgba(233, 109, 31, 0.2); border-left: 4px solid #e96d1f; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Action Required</h3>
+                    <p>You signed up using Google. Please set up a password to access sensitive account information.</p>
+                    <button class="action-button" onclick="showPasswordSetupModal()">
+                        <i class="fas fa-key"></i> Set Up Password
+                    </button>
+                </div>
+
+                <!-- Profile Tabs -->
+                <div class="profile-tabs">
+                    <button class="tab-button active" data-tab="personal">
+                        <i class="fas fa-user"></i> Personal Information
+                    </button>
+                    <button class="tab-button" data-tab="financial">
+                        <i class="fas fa-chart-pie"></i> Financial Information
+                    </button>
+                </div>
+
+                <!-- Profile Content -->
+                <div class="profile-content">
+                    <!-- Personal Information Tab -->
+                    <div class="profile-tab-content active" id="personal-tab">
+                        <div class="profile-section">
+                            <h2><i class="fas fa-id-card"></i> Personal Details</h2>
+                            <form id="personal-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>First Name</label>
+                                        <input type="text" id="firstName" name="firstName">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Last Name</label>
+                                        <input type="text" id="lastName" name="lastName">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-envelope"></i> Email Address 📧</label>
+                                    <input type="email" id="email" name="email">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-phone"></i> Phone Number 📞</label>
+                                    <input type="tel" id="phone" name="phone">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-home"></i> Residential Address 🏠</label>
+                                    <textarea id="address" name="address" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-briefcase"></i> Employment Status 💼</label>
+                                    <select id="employment" name="employment">
+                                        <option value="employed">Employed</option>
+                                        <option value="self-employed">Self-Employed</option>
+                                        <option value="unemployed">Unemployed</option>
+                                        <option value="student">Student</option>
+                                        <option value="retired">Retired</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="employer-group">
+                                    <label>Employer Name</label>
+                                    <input type="text" id="employer" name="employer">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="action-button">
+                                        <i class="fas fa-save"></i> Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Financial Information Tab -->
+                    <div class="profile-tab-content" id="financial-tab">
+                        <div class="profile-section">
+                            <h2><i class="fas fa-dollar-sign"></i> Financial Details</h2>
+                            <div class="verification-notice">
+                                <i class="fas fa-shield-alt"></i>
+                                <p>Verification required for updating financial information</p>
+                            </div>
+                            <form id="financial-form">
+                                <div class="form-group">
+                                    <label><i class="fas fa-money-bill-wave"></i> Monthly Income</label>
+                                    <div class="currency-input-container">
+                                        <span class="currency-symbol">₱</span>
+                                        <input type="number" id="monthly-income" name="monthly-income" step="0.01" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="button" id="update-income-btn" class="primary-button">
+                                        <i class="fas fa-save"></i> Update Income
+                                    </button>
+                                </div>
+
+                                <div class="form-group">
+                                    <label><i class="fas fa-id-card"></i> Government ID</label>
+                                    <div class="file-upload-container">
+                                        <input type="file" id="government-id" name="government-id" accept="image/*,.pdf" required>
+                                        <div class="file-upload-info">
+                                            <i class="fas fa-upload"></i>
+                                            <span>Upload a valid government ID (e.g., Driver's License, Passport)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label><i class="fas fa-home"></i> Proof of Address</label>
+                                    <div class="file-upload-container">
+                                        <input type="file" id="address-proof" name="address-proof" accept="image/*,.pdf" required>
+                                        <div class="file-upload-info">
+                                            <i class="fas fa-upload"></i>
+                                            <span>Upload a recent utility bill or lease agreement</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label><i class="fas fa-file-invoice"></i> Income Verification Documents</label>
+                                    <div class="file-upload-container">
+                                        <input type="file" id="income-proof" name="income-proof" accept="image/*,.pdf" required>
+                                        <div class="file-upload-info">
+                                            <i class="fas fa-upload"></i>
+                                            <span>Upload pay stubs, employment contract, or bank statements</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label><i class="fas fa-file-alt"></i> Tax Return</label>
+                                    <div class="file-upload-container">
+                                        <input type="file" id="tax-return" name="tax-return" accept="image/*,.pdf" required>
+                                        <div class="file-upload-info">
+                                            <i class="fas fa-upload"></i>
+                                            <span>Upload your most recent tax return document</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="submit" class="action-button">
+                                        <i class="fas fa-save"></i> Submit for Verification
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Chatbot -->
+    <div class="chatbot-container">
+        <div class="chatbot-toggle" id="chatbotToggle">
+            <div class="bot-icon"><i class="fas fa-robot"></i></div>
+            <div class="pulse-ring"></div>
+        </div>
+        
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chatbot-header">
+                <h3>AI Financial Assistant</h3>
+                <button class="close-btn" id="closeChatbot">×</button>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot-message">
+                    Hello! I'm your AI financial assistant. How can I help you today?
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="userInput" placeholder="Type your message...">
+                <button id="sendMessage">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this new modal for transaction details -->
+    <div id="transaction-details-modal" class="modal">
+        <div class="modal-content wider-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-file-invoice"></i> Transaction Details</h2>
+                <button class="modal-close-btn" onclick="document.getElementById('transaction-details-modal').style.display='none'">×</button>
+            </div>
+            
+            <div class="transaction-details-grid">
+                <div class="detail-item">
+                    <div class="detail-label">Transaction Name</div>
+                    <div class="detail-value" id="view-transaction-name"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Amount</div>
+                    <div class="detail-value" id="view-transaction-amount"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Account</div>
+                    <div class="detail-value" id="view-transaction-account">N/A</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Date & Time</div>
+                    <div class="detail-value" id="view-transaction-date"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Channel</div>
+                    <div class="detail-value" id="view-transaction-channel"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Category</div>
+                    <div class="detail-value" id="view-transaction-category"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Type</div>
+                    <div class="detail-value" id="view-transaction-status"></div>
+                </div>
+            </div>
+            
+            <div class="detail-item" style="margin-bottom: 1.5rem;">
+                <div class="detail-label">Notes</div>
+                <div class="detail-value" id="view-transaction-notes"></div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="action-button" onclick="editTransaction(this.closest('.modal').dataset.transactionId)">
+                    <i class="fas fa-edit"></i> Edit Transaction
+                </button>
+                <button class="cancel-button" onclick="document.getElementById('transaction-details-modal').style.display='none'">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add these modal containers -->
+    <div id="mata-gastos-modal" class="modal">
+        <div class="modal-content wider-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-brain"></i> Gabay Gastos</h2>
+                <button class="modal-close-btn" data-modal="mata-gastos-modal">×</button>
+            </div>
+            <div id="mata-gastos-modal-content" style="padding: 1.5rem; color: #fff;">
+                <!-- Content will be populated by mata-gastos.js -->
+            </div>
+        </div>
+    </div>
+
+    <div id="yaman-scout-modal" class="modal">
+        <div class="modal-content wider-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-chart-line"></i> Dunong Pununan</h2>
+                <button class="modal-close-btn" data-modal="yaman-scout-modal">×</button>
+            </div>
+            <div id="yaman-scout-modal-content">
+                <!-- Content will be populated by yaman-scout.js -->
+            </div>
+        </div>
+    </div>
+
+    <div id="pera-partner-modal" class="modal">
+        <div class="modal-content wider-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-piggy-bank"></i> Bantay Utang</h2>
+                <button class="modal-close-btn" data-modal="pera-partner-modal">×</button>
+            </div>
+            <div id="pera-partner-modal-content">
+                <!-- Content will be populated by pera-partner.js -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fraud Shield Modal -->
+    <div id="fraud-shield-modal" class="modal">
+        <div class="modal-content wider-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-shield-alt"></i> Iwas Scam</h2>
+                <button class="modal-close-btn" data-modal="fraud-shield-modal">×</button>
+            </div>
+            <div id="fraud-shield-modal-content">
+                <!-- Content will be populated by fraud-shield.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div id="verification-modal" class="modal">
+        // ... copy verification modal code from profile.html ...
+    </div>
+
+    <!-- Password Setup Modal -->
+    <div id="password-setup-modal" class="modal">
+        // ... copy password setup modal code from profile.html ...
+    </div>
+
+    <!-- Credit Companion Modal -->
+    <div id="credit-companion-modal" class="modal">
+        <div class="modal-content wider-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-chart-line"></i> Tiwala Score</h2>
+                <button class="modal-close-btn" data-modal="credit-companion-modal">&times;</button>
+            </div>
+            <div id="credit-companion-modal-content">
+                <!-- Content will be dynamically loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Access Modal -->
+    <div id="financial-access-modal" class="modal">
+        <div class="modal-content wider-modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h2><i class="fas fa-hands-helping"></i>Patunay Check</h2>
+                </div>
+                <button class="modal-close-btn" data-modal="financial-access-modal">&times;</button>
+            </div>
+            <div id="financial-access-modal-content" class="modal-body">
+                <!-- Content will be loaded by financial-access.js -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../js/modal/mata-gastos.js"></script>
+    <script type="module" src="../js/modal/yaman-scout.js"></script>
+    <script type="module" src="../js/modal/pera-partner.js"></script>
+    <script type="module" src="../js/modal/fraud-shield.js"></script>
+    <script type="module" src="../js/financialHealth.js"></script>
+    <script type="module" src="../js/forecast.js"></script>
+    <script type="module" src="../js/dashboardChatbot.js"></script>
+    
+    <link rel="stylesheet" href="../css/fraud-shield.css">
+    <script type="module" src="../js/modal/credit-companion.js"></script>
+    <link rel="stylesheet" href="../css/credit-companion.css">
+    <script type="module" src="../js/modal/financial-access.js"></script>
+    <link rel="stylesheet" href="../css/financial-access.css">
+
+    <script>
+        // Toggle chatbot window
+        document.getElementById('chatbotToggle').addEventListener('click', function() {
+            const chatbotWindow = document.getElementById('chatbotWindow');
+            if (chatbotWindow.style.display === 'block') {
+                chatbotWindow.style.opacity = '0';
+                chatbotWindow.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    chatbotWindow.style.display = 'none';
+                }, 300);
+            } else {
+                chatbotWindow.style.display = 'block';
+                setTimeout(() => {
+                    chatbotWindow.style.opacity = '1';
+                    chatbotWindow.style.transform = 'translateY(0)';
+                }, 10);
+            }
+        });
+
+        // Close chatbot
+        document.getElementById('closeChatbot').addEventListener('click', function() {
+            const chatbotWindow = document.getElementById('chatbotWindow');
+            chatbotWindow.style.opacity = '0';
+            chatbotWindow.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                chatbotWindow.style.display = 'none';
+            }, 300);
+        });
+        
+        // Navigation between pages
+        document.querySelectorAll('.sidebar-nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                document.querySelectorAll('.sidebar-nav a').forEach(l => {
+                    l.classList.remove('active');
+                });
+                
+                // Add active class to clicked link
+                this.classList.add('active');
+                
+                // Hide all pages
+                document.querySelectorAll('.page-content').forEach(page => {
+                    page.style.display = 'none';
+                });
+                
+                // Show requested page
+                const pageId = this.getAttribute('data-page') + '-page';
+                document.getElementById(pageId).style.display = 'block';
+            });
+        });
+        
+        // Add Bank Modal Handlers
+        document.getElementById('add-bank-button').addEventListener('click', function() {
+            document.getElementById('add-bank-modal').style.display = 'flex';
+        });
+        
+        // Handle empty state add bank button
+        document.getElementById('empty-add-bank-button').addEventListener('click', function() {
+            document.getElementById('add-bank-modal').style.display = 'flex';
+        });
+        
+        document.getElementById('close-add-bank').addEventListener('click', function() {
+            document.getElementById('add-bank-modal').style.display = 'none';
+        });
+        
+        document.getElementById('cancel-add-bank').addEventListener('click', function() {
+            document.getElementById('add-bank-modal').style.display = 'none';
+        });
+        
+        // Handle account type change
+        document.getElementById('account-type').addEventListener('change', function() {
+            const isEwallet = this.value === 'ewallet';
+            document.getElementById('bank-fields').style.display = isEwallet ? 'none' : 'block';
+            document.getElementById('ewallet-fields').style.display = isEwallet ? 'block' : 'none';
+            document.getElementById('number-label').textContent = isEwallet ? 'Account Number/Email' : 'Card Number';
+            document.getElementById('card-details-row').style.display = isEwallet ? 'none' : 'flex';
+        });
+        
+        // Handle ewallet provider change
+        document.getElementById('ewallet-provider').addEventListener('change', function() {
+            const isOther = this.value === 'other';
+            document.getElementById('other-provider-field').style.display = isOther ? 'block' : 'none';
+        });
+        
+        // Handle currency change
+        document.getElementById('currency').addEventListener('change', function() {
+            const currencySymbols = {
+                'PHP': '₱'
+            };
+            document.getElementById('currency-symbol').textContent = currencySymbols[this.value] || '₱';
+        });
+        
+        // Handle add bank form submission
+        document.getElementById('add-bank-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const accountType = document.getElementById('account-type').value;
+            const currency = document.getElementById('currency').value;
+            const cardNumber = document.getElementById('card-number').value;
+            const cardName = document.getElementById('card-name').value;
+            const balance = document.getElementById('balance').value;
+            
+            // Get bank name or ewallet provider
+            let institutionName;
+            if (accountType === 'bank') {
+                institutionName = document.getElementById('bank-name').value;
+            } else {
+                const provider = document.getElementById('ewallet-provider').value;
+                institutionName = provider === 'other' ? 
+                    document.getElementById('other-provider').value : 
+                    document.getElementById('ewallet-provider').options[document.getElementById('ewallet-provider').selectedIndex].text;
+            }
+            
+            // Format card number for display (hide all but last 4 digits)
+            const displayNumber = accountType === 'ewallet' && cardNumber.includes('@') ? 
+                cardNumber : // Show full email address
+                `**** **** **** ${cardNumber.slice(-4)}`;
+            
+            // Format currency symbol
+            const currencySymbols = {
+                'PHP': '₱'
+            };
+            const currencySymbol = currencySymbols[currency] || '₱';
+            
+            // Create new bank card
+            const bankCard = document.createElement('div');
+            bankCard.className = 'bank-card';
+            bankCard.dataset.id = Date.now(); // Unique ID based on timestamp
+            bankCard.innerHTML = `
+                <div class="card-type">${accountType === 'bank' ? 'Bank Account' : 'E-Wallet'}</div>
+                <div class="card-details">
+                    <div class="bank-name">${institutionName}</div>
+                    <div class="card-number">${displayNumber}</div>
+                    <div class="card-balance">${currencySymbol}${parseFloat(balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                </div>
+                <div class="card-actions">
+                    <button class="action-button"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+            `;
+            
+            // Add to bank cards grid
+            const bankCardsGrid = document.querySelector('.bank-cards-grid');
+            bankCardsGrid.appendChild(bankCard);
+            
+            // Hide empty state if it was showing
+            document.querySelector('.empty-state-container').style.display = 'none';
+            
+            // Update total balance and account count
+            updateBalanceSummary();
+            
+            // Reset form and close modal
+            this.reset();
+            document.getElementById('currency-symbol').textContent = '₱'; // Reset to default
+            document.getElementById('add-bank-modal').style.display = 'none';
+        });
+        
+        // Function to update balance summary
+        function updateBalanceSummary() {
+            const bankCards = document.querySelectorAll('.bank-card');
+            let totalBalance = 0;
+            let count = bankCards.length;
+            
+            bankCards.forEach(card => {
+                const balanceText = card.querySelector('.card-balance').textContent;
+                // Extract number from string (remove currency symbol and commas)
+                const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ''));
+                totalBalance += balance;
+            });
+            
+            // Update summary elements
+            document.getElementById('total-balance-amount').textContent = `₱${totalBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('total-accounts').textContent = count;
+        }
+        
+        // Add Transaction Modal Handlers
+        document.getElementById('add-transaction-button').addEventListener('click', function() {
+            document.getElementById('add-transaction-modal').style.display = 'flex';
+            
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('transaction-date').value = today;
+        });
+        
+        document.getElementById('close-add-transaction').addEventListener('click', function() {
+            document.getElementById('add-transaction-modal').style.display = 'none';
+        });
+        
+        // Initialize the page with empty states
+        window.addEventListener('DOMContentLoaded', function() {
+            // Set initial balance summary
+            document.getElementById('total-balance-amount').textContent = '₱0.00';
+            document.getElementById('total-accounts').textContent = '0';
+        });
+
+        // Initialize spending chart
+        function initializeSpendingChart() {
+            const ctx = document.getElementById('spendingChart').getContext('2d');
+            const emptyState = document.getElementById('chart-empty-state');
+            
+            // Get all transactions
+            const transactions = Array.from(document.getElementById('transactions-table-body').getElementsByTagName('tr'));
+            
+            if (transactions.length === 0) {
+                // Show empty state and hide chart
+                emptyState.style.display = 'block';
+                ctx.canvas.style.display = 'none';
+                return;
+            }
+
+            // Hide empty state and show chart
+            emptyState.style.display = 'none';
+            ctx.canvas.style.display = 'block';
+
+            // Process transactions for the chart
+            const today = new Date();
+            const last7Days = Array.from({length: 7}, (_, i) => {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                return date.toLocaleDateString('en-US', { weekday: 'short' });
+            }).reverse();
+
+            // Initialize spending data for each day
+            const spendingData = new Array(7).fill(0);
+
+            // Calculate spending for each day
+            transactions.forEach(tr => {
+                const amount = parseFloat(tr.children[1].textContent.replace(/[^0-9.-]+/g, ''));
+                const date = new Date(tr.children[3].textContent);
+                const dayIndex = 6 - Math.floor((today - date) / (1000 * 60 * 60 * 24));
+                
+                if (dayIndex >= 0 && dayIndex < 7 && amount < 0) { // Only count expenses
+                    spendingData[dayIndex] += Math.abs(amount);
+                }
+            });
+
+            // Find the maximum spending for scale
+            const maxSpending = Math.max(...spendingData);
+            const scale = getChartScale(maxSpending);
+
+            // Create gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(16, 223, 111, 0.3)');
+            gradient.addColorStop(1, 'rgba(16, 223, 111, 0)');
+
+            // Destroy existing chart if it exists
+            if (window.spendingChart) {
+                window.spendingChart.destroy();
+            }
+
+            // Create new chart
+            window.spendingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7Days,
+                    datasets: [{
+                        label: 'Daily Spending',
+                        data: spendingData,
+                        borderColor: '#10df6f',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: gradient,
+                        pointBackgroundColor: '#10df6f',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 6,
+                        pointHoverBorderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: scale.max,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₱' + formatNumber(value, scale.divisor);
+                                },
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '₱' + context.raw.toLocaleString();
+                                }
+                            },
+                            backgroundColor: 'rgba(6, 14, 33, 0.9)',
+                            padding: 12,
+                            cornerRadius: 8
+                        }
+                    }
+                }
+            });
+        }
+
+        // Helper function to determine chart scale
+        function getChartScale(maxValue) {
+            if (maxValue === 0) return { max: 1000, divisor: 1 };
+            
+            if (maxValue < 1000) {
+                return { max: 1000, divisor: 1 };
+            } else if (maxValue < 10000) {
+                return { max: Math.ceil(maxValue / 1000) * 1000, divisor: 1000 };
+            } else if (maxValue < 1000000) {
+                return { max: Math.ceil(maxValue / 1000) * 1000, divisor: 1000 };
+            } else {
+                return { max: Math.ceil(maxValue / 1000000) * 1000000, divisor: 1000000 };
+            }
+        }
+
+        // Helper function to format numbers with K/M suffix
+        function formatNumber(value, divisor) {
+            if (divisor === 1000) {
+                return (value / 1000).toLocaleString('en-US', {maximumFractionDigits: 1}) + 'K';
+            } else if (divisor === 1000000) {
+                return (value / 1000000).toLocaleString('en-US', {maximumFractionDigits: 1}) + 'M';
+            }
+            return value.toLocaleString('en-US', {maximumFractionDigits: 0});
+        }
+
+        // Common modal close functionality
+        document.querySelectorAll('.modal-close-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modalId = btn.getAttribute('data-modal');
+                if (modalId) {
+                    document.getElementById(modalId).style.display = 'none';
+                }
+            });
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
+
+        // Initialize Kita Companion tool cards
+        // Initialize mata-gastos tool
+        const mataGastosTool = document.getElementById('mata-gastos-tool');
+        if (mataGastosTool) {
+            mataGastosTool.addEventListener('click', function() {
+                document.getElementById('mata-gastos-modal').style.display = 'flex';
+                // Try to call the loadMataGastosContent function if it exists
+                if (typeof loadMataGastosContent === 'function') {
+                    loadMataGastosContent();
+                }
+            });
+        }
+        
+        // Initialize yaman-scout tool
+        const yamanScoutTool = document.getElementById('yaman-scout-tool');
+        if (yamanScoutTool) {
+            yamanScoutTool.addEventListener('click', function() {
+                document.getElementById('yaman-scout-modal').style.display = 'flex';
+            });
+        }
+        
+        // Initialize pera-partner tool
+        const peraPartnerTool = document.getElementById('pera-partner-tool');
+        if (peraPartnerTool) {
+            peraPartnerTool.addEventListener('click', function() {
+                document.getElementById('pera-partner-modal').style.display = 'flex';
+            });
+        }
+        
+        // Initialize fraud-shield tool
+        const fraudShieldTool = document.getElementById('fraud-shield-tool');
+        if (fraudShieldTool) {
+            fraudShieldTool.addEventListener('click', function() {
+                document.getElementById('fraud-shield-modal').style.display = 'flex';
+            });
+        }
+        
+        // Initialize credit-companion tool
+        const creditCompanionTool = document.getElementById('credit-companion-tool');
+        if (creditCompanionTool) {
+            creditCompanionTool.addEventListener('click', function() {
+                document.getElementById('credit-companion-modal').style.display = 'flex';
+                // Call the loadCreditCompanionContent function
+                if (typeof loadCreditCompanionContent === 'function') {
+                    loadCreditCompanionContent();
+                }
+            });
+        }
+        
+        // Initialize financial-access tool
+        const financialAccessTool = document.getElementById('financial-access-tool');
+        if (financialAccessTool) {
+            financialAccessTool.addEventListener('click', function() {
+                document.getElementById('financial-access-modal').style.display = 'flex';
+                if (typeof loadFinancialAccessContent === 'function') {
+                    loadFinancialAccessContent();
+                }
+            });
+        }
+
+        // Profile tab switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.querySelector('.profile-tabs')) {
+                document.querySelectorAll('.profile-tabs .tab-button').forEach(button => {
+                    button.addEventListener('click', () => {
+                        // Remove active class from all buttons and content
+                        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.remove('active'));
+                        
+                        // Add active class to clicked button and corresponding content
+                        button.classList.add('active');
+                        const tabId = `${button.dataset.tab}-tab`;
+                        document.getElementById(tabId).classList.add('active');
+                        
+                        // Load data when switching tabs
+                        if (button.dataset.tab === 'financial') {
+                            loadFinancialProfileData();
+                        } else if (button.dataset.tab === 'personal') {
+                            loadPersonalProfileData();
+                        }
+                    });
+                });
+                
+                // Load profile data on initial page load
+                loadPersonalProfileData();
+                loadFinancialProfileData();
+            }
+        });
+
+        // Function to load personal profile data
+        async function loadPersonalProfileData() {
+            try {
+                // Import necessary functions
+                const { getUserData } = await import('../js/firestoredb.js');
+                const user = window.auth.currentUser;
+                
+                if (!user) {
+                    console.error('No user logged in');
+                    return;
+                }
+                
+                // Get user data from Firestore
+                const userData = await getUserData(user.uid);
+                if (userData) {
+                    // Populate form fields with user data
+                    document.getElementById('firstName').value = userData.firstName || '';
+                    document.getElementById('lastName').value = userData.lastName || '';
+                    document.getElementById('email').value = userData.email || user.email || '';
+                    document.getElementById('phone').value = userData.phone || '';
+                    document.getElementById('address').value = userData.address || '';
+                    
+                    // Handle employment details
+                    if (userData.employmentDetails) {
+                        document.getElementById('employment').value = userData.employmentDetails.status || 'employed';
+                        document.getElementById('employer').value = userData.employmentDetails.employer || '';
+                    }
+                    
+                    // Handle employer field visibility based on employment status
+                    const employmentSelect = document.getElementById('employment');
+                    const employerGroup = document.getElementById('employer-group');
+                    
+                    if (employmentSelect && employerGroup) {
+                        employerGroup.style.display = 
+                            (employmentSelect.value === 'employed' || employmentSelect.value === 'self-employed') 
+                            ? 'block' : 'none';
+                            
+                        // Add event listener to handle visibility when selection changes
+                        employmentSelect.addEventListener('change', function() {
+                            employerGroup.style.display = 
+                                (this.value === 'employed' || this.value === 'self-employed') 
+                                ? 'block' : 'none';
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading personal profile data:', error);
+            }
+        }
+
+        // Function to load financial profile data
+        async function loadFinancialProfileData() {
+            try {
+                // Import necessary functions
+                const { getUserData } = await import('../js/firestoredb.js');
+                const user = window.auth.currentUser;
+                
+                if (!user) {
+                    console.error('No user logged in');
+                    return;
+                }
+                
+                // Get user data from Firestore
+                const userData = await getUserData(user.uid);
+                if (userData && userData.financialProfile && userData.financialProfile.monthlyIncome) {
+                    // Populate the monthly income field
+                    const monthlyIncomeField = document.getElementById('monthly-income');
+                    if (monthlyIncomeField) {
+                        monthlyIncomeField.value = userData.financialProfile.monthlyIncome;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading financial profile data:', error);
+            }
+        }
+
+        // Password setup modal functions
+        function showPasswordSetupModal() {
+            document.getElementById('password-setup-modal').style.display = 'flex';
+        }
+
+        function closePasswordSetupModal() {
+            document.getElementById('password-setup-modal').style.display = 'none';
+        }
+
+        // Helper functions for showing messages
+        function showSuccessMessage(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            // Find the correct place to insert the alert
+            const container = document.querySelector('.profile-container');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 150);
+            }, 5000);
+        }
+        
+        function showErrorMessage(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            // Find the correct place to insert the alert
+            const container = document.querySelector('.profile-container');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 150);
+            }, 5000);
+        }
+
+        // Add form submission handlers
+        document.getElementById('personal-form')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                // Import necessary functions
+                const { getUserData, storeUserData } = await import('../js/firestoredb.js');
+                const { validateName, validateEmail, sanitizeString, showValidationError, clearAllValidationErrors } = await import('../js/helpers.js');
+                const user = window.auth.currentUser;
+                
+                if (!user) {
+                    console.error('No user logged in');
+                    alert('You must be logged in to update your information.');
+                    return;
+                }
+                
+                // Clear any previous validation errors
+                clearAllValidationErrors(this);
+                
+                // Get and validate form values
+                // Validate first name
+                const firstNameValidation = validateName(document.getElementById('firstName').value, 'First name');
+                if (!firstNameValidation.isValid) {
+                    showValidationError(this, 'firstName', firstNameValidation.error);
+                    document.getElementById('firstName').focus();
+                    return;
+                }
+                
+                // Validate last name
+                const lastNameValidation = validateName(document.getElementById('lastName').value, 'Last name');
+                if (!lastNameValidation.isValid) {
+                    showValidationError(this, 'lastName', lastNameValidation.error);
+                    document.getElementById('lastName').focus();
+                    return;
+                }
+                
+                // Validate email
+                const emailValidation = validateEmail(document.getElementById('email').value);
+                if (!emailValidation.isValid) {
+                    showValidationError(this, 'email', emailValidation.error);
+                    document.getElementById('email').focus();
+                    return;
+                }
+                
+                // Get other form values
+                const phoneElement = document.getElementById('phone');
+                const addressElement = document.getElementById('address');
+                const employmentElement = document.getElementById('employment');
+                const employerElement = document.getElementById('employer');
+                
+                // Validate phone (optional but must be in valid format if provided)
+                const phone = phoneElement.value.trim();
+                if (phone && !/^(\+\d{1,3})?[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/.test(phone)) {
+                    showValidationError(this, 'phone', 'Invalid phone number format');
+                    phoneElement.focus();
+                    return;
+                }
+                
+                // Validate address (optional)
+                const address = addressElement.value.trim();
+                
+                // Get employment status
+                const employment = employmentElement.value;
+                
+                // Validate employer if employed or self-employed
+                let employer = '';
+                if (employment === 'employed' || employment === 'self-employed') {
+                    employer = employerElement.value.trim();
+                    if (!employer) {
+                        showValidationError(this, 'employer', 'Employer name is required');
+                        employerElement.focus();
+                        return;
+                    } else if (employer.length > 100) {
+                        showValidationError(this, 'employer', 'Employer name too long (maximum 100 characters)');
+                        employerElement.focus();
+                        return;
+                    }
+                }
+                
+                // Show loading state
+                const submitButton = this.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                
+                // Get current user data
+                const userData = await getUserData(user.uid);
+                if (!userData) {
+                    throw new Error('Failed to retrieve user data');
+                }
+                
+                // Update the user data with sanitized values
+                const updatedUserData = {
+                    ...userData,
+                    firstName: sanitizeString(firstNameValidation.value),
+                    lastName: sanitizeString(lastNameValidation.value),
+                    email: sanitizeString(emailValidation.value),
+                    phone: sanitizeString(phone),
+                    address: sanitizeString(address),
+                    employmentDetails: {
+                        status: sanitizeString(employment),
+                        employer: sanitizeString(employer)
+                    },
+                    updatedAt: new Date().toISOString()
+                };
+                
+                // Store the updated data in Firestore
+                const success = await storeUserData(user.uid, updatedUserData);
+                
+                if (success) {
+                    // Update localStorage for immediate UI updates
+                    localStorage.setItem('userData', JSON.stringify(updatedUserData));
+                    
+                    // Show success message
+                    showSuccessMessage('Personal information updated successfully!');
+                } else {
+                    throw new Error('Failed to update user data');
+                }
+            } catch (error) {
+                console.error('Error updating personal information:', error);
+                showErrorMessage('Error updating information: ' + error.message);
+            } finally {
+                // Restore button state
+                const submitButton = this.querySelector('button[type="submit"]');
+                submitButton.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+                submitButton.disabled = false;
+            }
+        });
+
+        document.getElementById('financial-form')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Add your form submission logic here
+        });
+
+        // Monthly income update button handler
+        document.getElementById('update-income-btn')?.addEventListener('click', async function() {
+            const monthlyIncome = document.getElementById('monthly-income').value;
+            if (!monthlyIncome || isNaN(parseFloat(monthlyIncome))) {
+                showErrorMessage('Please enter a valid income amount');
+                return;
+            }
+            
+            // Show loading state
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            
+            try {
+                // Import the updateFinancialProfile function from firestoredb.js
+                const { updateFinancialProfile } = await import('../js/firestoredb.js');
+                
+                const user = window.auth.currentUser;
+                if (!user) throw new Error('User not authenticated');
+                
+                // Use the existing updateFinancialProfile function
+                const success = await updateFinancialProfile(user.uid, {
+                    monthlyIncome: parseFloat(monthlyIncome)
+                });
+                
+                if (success) {
+                    showSuccessMessage('Monthly income updated successfully!');
+                } else {
+                    throw new Error('Failed to update financial profile');
+                }
+            } catch (error) {
+                console.error('Error updating monthly income:', error);
+                showErrorMessage('Failed to update monthly income. Please try again.');
+            } finally {
+                // Restore button state
+                this.disabled = false;
+                this.innerHTML = originalText;
+            }
+        });
+
+        document.getElementById('security-form')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                // Import necessary functions
+                const { showValidationError, clearAllValidationErrors } = await import('../js/helpers.js');
+                const user = window.auth.currentUser;
+                
+                if (!user) {
+                    console.error('No user logged in');
+                    alert('You must be logged in to update your security settings.');
+                    return;
+                }
+                
+                // Clear any previous validation errors
+                clearAllValidationErrors(this);
+                
+                const currentPassword = document.getElementById('current-password').value;
+                const newPassword = document.getElementById('new-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+                
+                // Validate current password is provided
+                if (!currentPassword) {
+                    showValidationError(this, 'current-password', 'Current password is required');
+                    document.getElementById('current-password').focus();
+                    return;
+                }
+                
+                // Validate new password strength
+                if (newPassword) {
+                    // Check password length
+                    if (newPassword.length < 8) {
+                        showValidationError(this, 'new-password', 'Password must be at least 8 characters');
+                        document.getElementById('new-password').focus();
+                        return;
+                    }
+                    
+                    // Check password complexity
+                    const hasLowerCase = /[a-z]/.test(newPassword);
+                    const hasUpperCase = /[A-Z]/.test(newPassword);
+                    const hasNumber = /[0-9]/.test(newPassword);
+                    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
+                    
+                    if (!(hasLowerCase && hasUpperCase && hasNumber && hasSpecialChar)) {
+                        showValidationError(this, 'new-password', 'Password must include uppercase, lowercase, number, and special character');
+                        document.getElementById('new-password').focus();
+                        return;
+                    }
+                    
+                    // Check passwords match
+                    if (newPassword !== confirmPassword) {
+                        showValidationError(this, 'confirm-password', 'Passwords do not match');
+                        document.getElementById('confirm-password').focus();
+                        return;
+                    }
+                }
+                
+                // Show loading state
+                const submitButton = this.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+                
+                // Reauthenticate user first
+                try {
+                    const credential = firebase.auth.EmailAuthProvider.credential(
+                        user.email,
+                        currentPassword
+                    );
+                    
+                    await user.reauthenticateWithCredential(credential);
+                    
+                    // Change password if new password is provided
+                    if (newPassword) {
+                        await user.updatePassword(newPassword);
+                        showSuccessMessage('Password updated successfully! Please use your new password next time you log in.');
+                    } else {
+                        showSuccessMessage('Authentication successful! No changes were made.');
+                    }
+                    
+                    // Clear the form
+                    this.reset();
+                } catch (authError) {
+                    console.error('Authentication error:', authError);
+                    if (authError.code === 'auth/wrong-password') {
+                        showValidationError(this, 'current-password', 'Current password is incorrect');
+                        document.getElementById('current-password').focus();
+                    } else {
+                        showErrorMessage('Authentication error: ' + authError.message);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating security settings:', error);
+                showErrorMessage('Error updating security settings: ' + error.message);
+            } finally {
+                // Restore button state
+                const submitButton = this.querySelector('button[type="submit"]');
+                submitButton.innerHTML = '<i class="fas fa-save"></i> Update Security';
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
