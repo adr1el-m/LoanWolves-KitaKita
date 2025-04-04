@@ -1,0 +1,45 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Financial documents - only accessible by owner
+    match /users/{userId}/documents/{document=**} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow write: if isSignedIn() && isOwner(userId) && 
+                   request.resource.size < 5 * 1024 * 1024 && // 5MB max size
+                   request.resource.contentType.matches('application/pdf|image/jpeg|image/png'); // Only allow PDFs and images
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+    
+    // Profile images
+    match /users/{userId}/profile/{image} {
+      allow read: if true; // Public read access
+      allow write: if isSignedIn() && isOwner(userId) && 
+                   request.resource.size < 2 * 1024 * 1024 && // 2MB max size
+                   request.resource.contentType.matches('image/jpeg|image/png'); // Only images
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+    
+    // Public documents/images - read access to all, write access to owners
+    match /public/{document=**} {
+      allow read: if true;
+      allow write: if isSignedIn() && 
+                   request.resource.size < 10 * 1024 * 1024 && // 10MB max size
+                   request.auth.token.email_verified == true; // Require verified email
+      allow delete: if false; // Only admins can delete public resources
+    }
+    
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+} 

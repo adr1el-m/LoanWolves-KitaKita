@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isValidUser() {
+      return request.auth.uid != null && 
+             request.auth.token.email_verified == true;
+    }
+    
+    // Basic read-only access for public resources (if needed)
+    match /public/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // User data protection
+    match /users/{userId} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if false; // Prevent deletion of user data
+    }
+    
+    // Bank account data - strict protection
+    match /users/{userId}/bankAccounts/{accountId} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow write: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+    
+    // Transaction data
+    match /users/{userId}/transactions/{transactionId} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && 
+                   request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isOwner(userId) && 
+                   resource.data.userId == userId && 
+                   request.resource.data.userId == userId;
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+    
+    // Login activity logging
+    match /loginActivity/{activityId} {
+      allow read: if isSignedIn() && 
+                 resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && 
+                   request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Immutable records
+    }
+    
+    // Financial profiles
+    match /financialProfiles/{userId} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow write: if isSignedIn() && isOwner(userId);
+      allow delete: if false; // Prevent deletion
+    }
+    
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 
