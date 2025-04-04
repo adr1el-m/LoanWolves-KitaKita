@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Tracking Diagnostics</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --primary-dark: #1976D2;
+            --success-color: #4CAF50;
+            --warning-color: #FFC107;
+            --error-color: #F44336;
+            --surface-dark: #242424;
+            --surface-hover: #2a2a2a;
+            --text-color: #f0f0f0;
+            --text-secondary: #adb5bd;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .card {
+            background-color: var(--surface-dark);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h2 {
+            margin-top: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card h2 i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+        
+        .user-info-card {
+            background-color: var(--surface-hover);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .user-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .user-header h3 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+        
+        .user-details p {
+            margin: 8px 0;
+        }
+        
+        .logs-container {
+            margin-top: 20px;
+        }
+        
+        .logs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .logs-table th, 
+        .logs-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--surface-hover);
+        }
+        
+        .logs-table th {
+            background-color: var(--surface-hover);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .logs-table tr:hover {
+            background-color: rgba(33, 150, 243, 0.05);
+        }
+        
+        .success, .success-badge {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: var(--success-color);
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .warning {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: var(--warning-color);
+            padding: 16px;
+            border-radius: 4px;
+            margin-top: 16px;
+            text-align: center;
+        }
+        
+        .error, .error-badge {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: var(--error-color);
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        
+        .btn i {
+            margin-right: 8px;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background-color: var(--surface-hover);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(33, 150, 243, 0.1);
+        }
+        
+        .log-info {
+            margin-top: 15px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-align: right;
+        }
+        
+        .help-text {
+            background-color: rgba(33, 150, 243, 0.05);
+            border-left: 3px solid var(--primary-color);
+            padding: 12px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Login Tracking Diagnostics</h1>
+            <p>This tool helps diagnose issues with the login tracking system</p>
+        </header>
+        
+        <div class="card">
+            <h2><i class="fas fa-user-shield"></i> Authentication Status</h2>
+            <div id="status-display">
+                <!-- Authentication status will be displayed here -->
+            </div>
+        </div>
+        
+        <div id="user-info">
+            <!-- User information will be displayed here -->
+        </div>
+        
+        <div class="card">
+            <h2><i class="fas fa-history"></i> Login History</h2>
+            
+            <div class="help-text">
+                <p><strong>How it works:</strong> This tool checks both the "loginActivity" and "logins" collections for your login history. If login tracking is working properly, you should see your login records below.</p>
+            </div>
+            
+            <div class="button-group">
+                <button id="manual-log-btn" class="btn">
+                    <i class="fas fa-plus-circle"></i> Create Manual Login Record
+                </button>
+                <button id="refresh-btn" class="btn btn-secondary">
+                    <i class="fas fa-sync"></i> Refresh Login Logs
+                </button>
+            </div>
+            
+            <div id="login-logs">
+                <!-- Login logs will be displayed here -->
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2><i class="fas fa-question-circle"></i> Troubleshooting</h2>
+            <p>If no login logs are displayed, this could be due to several issues:</p>
+            <ol>
+                <li>The login tracking function in <code>login.js</code> is not being called.</li>
+                <li>The login activity is being stored in a different collection structure.</li>
+                <li>There might be errors during the login tracking process.</li>
+                <li>Firestore permissions might be preventing the writing of login logs.</li>
+            </ol>
+            <p>Try clicking the "Create Manual Login Record" button to test if manual log creation works.</p>
+            <p>After resolving the issue, sign out and sign back in to see if login tracking is now working.</p>
+        </div>
+    </div>
+    
+    <script type="module" src="./js/loginTracker.js"></script>
+</body>
+</html> 

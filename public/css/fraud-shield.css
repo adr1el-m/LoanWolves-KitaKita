@@ -1,0 +1,485 @@
+/* Fraud Shield Tool Styling */
+.fraud-shield-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1rem 0;
+}
+
+/* Security Score Section */
+.security-score-container {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.security-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.score-ring {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: conic-gradient(
+        var(--score-color, #10df6f) var(--score-percent),
+        rgba(255, 255, 255, 0.1) var(--score-percent)
+    );
+    position: relative;
+}
+
+.score-ring::before {
+    content: '';
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #121c2e;
+}
+
+.score-value {
+    position: relative;
+    z-index: 1;
+}
+
+.score-label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+}
+
+.security-details {
+    flex: 1;
+}
+
+.security-details h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.security-details p {
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.security-recommendations {
+    background: rgba(16, 223, 111, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 3px solid #10df6f;
+}
+
+.security-recommendations h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.security-recommendations h4 i {
+    color: #10df6f;
+}
+
+.security-recommendations ul {
+    list-style-type: none;
+    padding-left: 1.5rem;
+    margin: 0;
+}
+
+.security-recommendations ul li {
+    position: relative;
+    padding-left: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.security-recommendations ul li::before {
+    content: "→";
+    position: absolute;
+    left: -1rem;
+    color: #10df6f;
+}
+
+/* Section Divider */
+.section-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    width: 100%;
+    margin: 0.5rem 0;
+}
+
+/* Alerts Table Section */
+.fraud-alerts-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.fraud-alerts-section h3 i {
+    color: #ffcc00;
+}
+
+.alerts-table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.alerts-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.alerts-table th,
+.alerts-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.alerts-table th {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.alerts-table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Risk Level Badges */
+.risk-level {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.risk-level.high {
+    background: rgba(255, 59, 48, 0.15);
+    color: #ff3b30;
+}
+
+.risk-level.medium {
+    background: rgba(255, 204, 0, 0.15);
+    color: #ffcc00;
+}
+
+.risk-level.low {
+    background: rgba(16, 223, 111, 0.15);
+    color: #10df6f;
+}
+
+/* Alert Status Badges */
+.alert-status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.alert-status.blocked {
+    background: rgba(255, 59, 48, 0.15);
+    color: #ff3b30;
+}
+
+.alert-status.reviewed {
+    background: rgba(90, 200, 250, 0.15);
+    color: #5ac8fa;
+}
+
+.alert-status.permitted {
+    background: rgba(16, 223, 111, 0.15);
+    color: #10df6f;
+}
+
+/* Insights Section */
+.fraud-insights-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.fraud-insights-section h3 i {
+    color: #10df6f;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.insight-card {
+    display: flex;
+    align-items: flex-start;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+    gap: 1rem;
+}
+
+.insight-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(16, 223, 111, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #10df6f;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.insight-content h4 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.insight-content p {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+/* Action Buttons */
+.fraud-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.action-button {
+    background: linear-gradient(135deg, #10df6f, #0ea55d);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.action-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(16, 223, 111, 0.3);
+}
+
+.action-button.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.action-button.secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 0;
+}
+
+.pulse-loader {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(16, 223, 111, 0.2);
+    animation: pulse 1.5s infinite ease-in-out;
+    margin-bottom: 1.5rem;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .security-score-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .security-score {
+        margin-bottom: 1rem;
+    }
+    
+    .fraud-actions {
+        flex-direction: column;
+    }
+}
+
+/* Login History Section */
+.login-history-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.login-history-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.login-history-section h3 i {
+    color: #5ac8fa;
+}
+
+.section-description {
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.login-history-table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.login-history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.login-history-table th,
+.login-history-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login-history-table th {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.login-history-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.login-time {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.location-info,
+.device-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.location-info i {
+    color: #ff3b30;
+}
+
+.device-info i {
+    color: #5ac8fa;
+}
+
+.login-method {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.login-method.google {
+    background: rgba(66, 133, 244, 0.1);
+    color: #4285f4;
+}
+
+.login-method.email {
+    background: rgba(76, 217, 100, 0.1);
+    color: #4cd964;
+}
+
+.no-logins {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.no-logins i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.view-all-container {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.view-all-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.view-all-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+} 

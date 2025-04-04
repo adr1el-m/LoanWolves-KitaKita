@@ -1,0 +1,321 @@
+/* Credit Companion Styles */
+.credit-companion-container {
+    color: var(--text-color, #f0f0f0);
+}
+
+.credit-score-container {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 32px;
+    background: var(--surface-card, #242424);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.credit-score {
+    text-align: center;
+}
+
+.score-ring {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--score-color) calc(var(--score-percent)),
+        #2a2a2a calc(var(--score-percent))
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 0 auto 16px;
+}
+
+.score-ring::before {
+    content: '';
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: var(--surface-ground, #1a1a1a);
+}
+
+.score-value {
+    position: relative;
+    z-index: 1;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--score-color);
+}
+
+.score-label {
+    font-size: 1.1rem;
+    color: var(--text-color-secondary, #adb5bd);
+    line-height: 1.4;
+}
+
+.score-details {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.score-details h3 {
+    color: var(--text-color, #f0f0f0);
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.score-details p {
+    color: var(--text-color-secondary, #adb5bd);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.credit-factors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 24px;
+}
+
+.factor-card {
+    background: var(--surface-card, #242424);
+    padding: 20px;
+    border-radius: 12px;
+    transition: transform 0.2s;
+}
+
+.factor-card:hover {
+    transform: translateY(-2px);
+}
+
+.factor-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.factor-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.factor-icon.excellent { background: rgba(76, 175, 80, 0.15); color: #69db7c; }
+.factor-icon.good { background: rgba(33, 150, 243, 0.15); color: #5ac8fa; }
+.factor-icon.fair { background: rgba(255, 152, 0, 0.15); color: #ffd43b; }
+.factor-icon.poor { background: rgba(244, 67, 54, 0.15); color: #ff6b6b; }
+
+.factor-title {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--text-color, #f0f0f0);
+}
+
+.factor-score {
+    margin-bottom: 16px;
+}
+
+.factor-progress {
+    height: 8px;
+    background: var(--surface-hover, #2a2a2a);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.factor-progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.factor-value {
+    font-size: 0.9rem;
+    color: var(--text-color-secondary, #adb5bd);
+    text-align: right;
+}
+
+.factor-description {
+    color: var(--text-color-secondary, #adb5bd);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.recommendations-section {
+    background: var(--surface-card, #242424);
+    padding: 24px;
+    border-radius: 12px;
+    margin-top: 24px;
+}
+
+.recommendations-section h3 {
+    color: var(--text-color, #f0f0f0);
+    margin: 0 0 20px 0;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.recommendation-card {
+    background: var(--surface-hover, #2a2a2a);
+    padding: 20px;
+    border-radius: 12px;
+    transition: transform 0.2s;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-2px);
+}
+
+.recommendation-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.recommendation-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary-color-alpha, rgba(33, 150, 243, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--primary-color, #2196F3);
+}
+
+.recommendation-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-color, #f0f0f0);
+}
+
+.recommendation-description {
+    color: var(--text-color-secondary, #adb5bd);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.recommendation-action {
+    background: var(--primary-color, #2196F3);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    transition: background-color 0.2s;
+}
+
+.recommendation-action:hover {
+    background: var(--primary-color-darker, #1976D2);
+}
+
+.section-divider {
+    height: 1px;
+    background: var(--surface-border, #333);
+    margin: 24px 0;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    text-align: center;
+}
+
+.pulse-loader {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--primary-color, #2196F3);
+    margin-bottom: 24px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+.error-state {
+    text-align: center;
+    padding: 48px;
+}
+
+.error-state i {
+    font-size: 48px;
+    color: #ff6b6b;
+    margin-bottom: 16px;
+}
+
+.error-state p {
+    color: var(--text-color-secondary, #adb5bd);
+    margin-bottom: 24px;
+}
+
+.retry-button {
+    background: var(--primary-color, #2196F3);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+    background: var(--primary-color-darker, #1976D2);
+}
+
+@media (max-width: 768px) {
+    .credit-score-container {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .score-ring {
+        width: 160px;
+        height: 160px;
+    }
+
+    .score-ring::before {
+        width: 128px;
+        height: 128px;
+    }
+
+    .score-value {
+        font-size: 2rem;
+    }
+
+    .recommendations-grid {
+        grid-template-columns: 1fr;
+    }
+} 

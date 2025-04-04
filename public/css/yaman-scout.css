@@ -1,0 +1,314 @@
+/* Yaman Scout Tool Styling */
+.yaman-scout-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1rem 0;
+}
+
+/* Portfolio Overview Section */
+.portfolio-overview {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.overview-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.overview-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 204, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffcc00;
+    font-size: 1.5rem;
+}
+
+.overview-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.portfolio-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Investment Opportunities Section */
+.investment-opportunities {
+    background: rgba(255, 204, 0, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border-left: 3px solid #ffcc00;
+}
+
+.opportunities-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.opportunities-header i {
+    color: #ffcc00;
+    font-size: 1.2rem;
+}
+
+.opportunities-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.opportunities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.opportunity-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.opportunity-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.opportunity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 204, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffcc00;
+    font-size: 1.2rem;
+}
+
+.opportunity-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.opportunity-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+}
+
+.detail-label {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.detail-value {
+    color: #fff;
+    font-weight: 500;
+}
+
+.opportunity-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.tag {
+    background: rgba(255, 204, 0, 0.1);
+    color: #ffcc00;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+}
+
+.opportunity-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: rgba(255, 204, 0, 0.1);
+    color: #ffcc00;
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: auto;
+}
+
+.opportunity-action:hover {
+    background: rgba(255, 204, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Market Insights Section */
+.market-insights {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.insights-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.insights-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.insight-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.insight-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.insight-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.insight-icon.positive {
+    background: rgba(16, 223, 111, 0.1);
+    color: #10df6f;
+}
+
+.insight-icon.negative {
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+}
+
+.insight-icon.neutral {
+    background: rgba(255, 204, 0, 0.1);
+    color: #ffcc00;
+}
+
+.insight-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.insight-description {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 0;
+}
+
+.pulse-loader {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 204, 0, 0.2);
+    animation: pulse 1.5s infinite ease-in-out;
+    margin-bottom: 1.5rem;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .portfolio-stats,
+    .opportunities-grid,
+    .insights-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+    }
+    
+    .opportunity-card {
+        padding: 1rem;
+    }
+} 
