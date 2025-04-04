@@ -78,21 +78,116 @@ export function formatPercent(value) {
     return (value * 100).toFixed(1) + '%';
 }
 
-// Validate email format
+/**
+ * Validates an email address with a more strict regex
+ * This regex follows RFC 5322 standards more closely and prevents many edge cases
+ * @param {string} email - The email to validate
+ * @returns {boolean} - Whether the email is valid
+ */
 export function isValidEmail(email) {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
+    if (!email || typeof email !== 'string') return false;
+    
+    // Trim whitespace
+    email = email.trim();
+    
+    // Check length constraints
+    if (email.length < 6 || email.length > 254) return false;
+    
+    // More comprehensive regex for email validation
+    // This checks for proper format with username@domain.tld
+    const emailRegex = /^(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$/i;
+    
+    if (!emailRegex.test(email)) return false;
+    
+    // Additional validation for domain part
+    const [, domain] = email.split('@');
+    if (!domain) return false;
+    
+    // Must have at least one period in the domain
+    if (!domain.includes('.')) return false;
+    
+    // TLD must be at least 2 characters
+    const tld = domain.split('.').pop();
+    if (!tld || tld.length < 2) return false;
+    
+    return true;
 }
 
-// Validate password strength
+/**
+ * Validates password strength using multiple criteria
+ * Does not rely solely on regex which can be bypassed
+ * @param {string} password - The password to validate
+ * @returns {boolean} - Whether the password is strong
+ */
 export function isStrongPassword(password) {
-    // At least 8 characters, contains uppercase, lowercase, number, and special character
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    return regex.test(password);
+    if (!password || typeof password !== 'string') return false;
+    
+    // Check length
+    if (password.length < 8) return false;
+    
+    // Check for maximum length (prevents DoS attacks)
+    if (password.length > 128) return false;
+    
+    // Track the criteria
+    let hasLowercase = false;
+    let hasUppercase = false;
+    let hasDigit = false;
+    let hasSpecial = false;
+    
+    // Define character sets
+    const lowerCaseChars = 'abcdefghijklmnopqrstuvwxyz';
+    const upperCaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const digitChars = '0123456789';
+    const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`"\'\\';
+    
+    // Count character types
+    for (let i = 0; i < password.length; i++) {
+        const char = password[i];
+        
+        if (lowerCaseChars.includes(char)) {
+            hasLowercase = true;
+        } else if (upperCaseChars.includes(char)) {
+            hasUppercase = true;
+        } else if (digitChars.includes(char)) {
+            hasDigit = true;
+        } else if (specialChars.includes(char)) {
+            hasSpecial = true;
+        }
+    }
+    
+    // Require at least 3 of the 4 character types
+    const criteriaCount = [hasLowercase, hasUppercase, hasDigit, hasSpecial].filter(Boolean).length;
+    if (criteriaCount < 3) return false;
+    
+    // Check for common patterns and dictionary words
+    // This is a basic check - a real implementation would use a more comprehensive dictionary
+    const commonPatterns = [
+        '12345678', '87654321', 'password', 'qwerty', 'abc123',
+        'admin123', 'letmein', 'welcome', 'monkey', 'football'
+    ];
+    
+    const lowercasePassword = password.toLowerCase();
+    for (const pattern of commonPatterns) {
+        if (lowercasePassword.includes(pattern)) return false;
+    }
+    
+    // Check for keyboard sequences
+    const keyboardSequences = ['qwerty', 'asdfgh', 'zxcvbn', '123456', '654321'];
+    for (const sequence of keyboardSequences) {
+        if (lowercasePassword.includes(sequence)) return false;
+    }
+    
+    // Check for repeating characters
+    if (/(.)\1{3,}/.test(password)) {
+        return false; // Contains same character 4 or more times in a row
+    }
+    
+    return true;
 }
 
 // Truncate text with ellipsis
 export function truncateText(text, maxLength) {
+    if (!text || typeof text !== 'string') return '';
     if (text.length <= maxLength) return text;
     return text.slice(0, maxLength) + '...';
 }
@@ -203,6 +298,7 @@ export async function initEncryption(userId) {
 
 /**
  * Sanitizes a string to prevent XSS attacks
+ * Uses more comprehensive approach than the original implementation
  * @param {string} input - The string to sanitize
  * @returns {string} - Sanitized string
  */
@@ -211,18 +307,37 @@ export function sanitizeString(input) {
         return '';
     }
     
-    // Create a temporary DOM element
-    const tempElement = document.createElement('div');
+    // First pass: HTML encode special characters
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+        '/': '&#x2F;',
+        '`': '&#x60;',
+        '=': '&#x3D;'
+    };
     
-    // Set the content as text (not HTML) which automatically escapes HTML entities
-    tempElement.textContent = input;
+    // Replace special characters with HTML entities
+    let encodedString = input.replace(/[&<>"'`=\/]/g, function(char) {
+        return map[char];
+    });
     
-    // Get the escaped HTML as a string
-    return tempElement.innerHTML;
+    // Second pass: remove potential script execution vectors
+    // Remove javascript: and data: URLs which can execute code
+    encodedString = encodedString.replace(/javascript:/gi, 'removed:');
+    encodedString = encodedString.replace(/data:/gi, 'removed:');
+    
+    // Remove event handlers which can execute JavaScript
+    encodedString = encodedString.replace(/on\w+=/gi, 'removed=');
+    
+    return encodedString;
 }
 
 /**
  * Sanitizes an object by sanitizing all string properties
+ * More robust implementation for nested objects
  * @param {Object} object - The object to sanitize
  * @returns {Object} - Sanitized object
  */
@@ -231,20 +346,31 @@ export function sanitizeObject(object) {
         return {};
     }
     
+    // Handle arrays
+    if (Array.isArray(object)) {
+        return object.map(item => {
+            if (typeof item === 'string') {
+                return sanitizeString(item);
+            } else if (typeof item === 'object' && item !== null) {
+                return sanitizeObject(item);
+            }
+            return item;
+        });
+    }
+    
+    // Handle regular objects
     const sanitizedObject = {};
     
     for (const [key, value] of Object.entries(object)) {
+        // Sanitize keys too (in case they're user-provided)
+        const sanitizedKey = typeof key === 'string' ? sanitizeString(key) : key;
+        
         if (typeof value === 'string') {
-            sanitizedObject[key] = sanitizeString(value);
-        } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-            sanitizedObject[key] = sanitizeObject(value);
-        } else if (Array.isArray(value)) {
-            sanitizedObject[key] = value.map(item => 
-                typeof item === 'string' ? sanitizeString(item) : 
-                typeof item === 'object' && item !== null ? sanitizeObject(item) : item
-            );
+            sanitizedObject[sanitizedKey] = sanitizeString(value);
+        } else if (typeof value === 'object' && value !== null) {
+            sanitizedObject[sanitizedKey] = sanitizeObject(value);
         } else {
-            sanitizedObject[key] = value;
+            sanitizedObject[sanitizedKey] = value;
         }
     }
     
@@ -252,240 +378,283 @@ export function sanitizeObject(object) {
 }
 
 /**
- * Validates a financial amount
+ * Validates a monetary amount
  * @param {string|number} amount - The amount to validate
- * @returns {object} - Validation result with isValid and value properties
+ * @param {number} min - Minimum valid amount (default: 0)
+ * @param {number} max - Maximum valid amount (default: 1000000)
+ * @returns {boolean} - Whether the amount is valid
  */
-export function validateAmount(amount) {
-    // Convert to string and trim
-    const strAmount = String(amount).trim();
+export function validateAmount(amount, min = 0, max = 1000000) {
+    // Convert to number if it's a string
+    let numAmount;
     
-    // Check if empty
-    if (!strAmount) {
-        return { isValid: false, value: null, error: 'Amount is required' };
+    if (typeof amount === 'string') {
+        // Remove currency symbols, commas, etc.
+        const cleanedAmount = amount.replace(/[^\d.-]/g, '');
+        numAmount = parseFloat(cleanedAmount);
+    } else if (typeof amount === 'number') {
+        numAmount = amount;
+    } else {
+        return false;
     }
-    
-    // Remove currency symbols and commas
-    const cleanAmount = strAmount.replace(/[₱$,]/g, '');
     
     // Check if it's a valid number
-    if (!/^-?\d+(\.\d{1,2})?$/.test(cleanAmount)) {
-        return { isValid: false, value: null, error: 'Amount must be a valid number with up to 2 decimal places' };
-    }
+    if (isNaN(numAmount)) return false;
     
-    const numAmount = parseFloat(cleanAmount);
+    // Check range
+    if (numAmount < min || numAmount > max) return false;
     
-    // Check if it's within a reasonable range
-    if (numAmount < -999999999 || numAmount > 999999999) {
-        return { isValid: false, value: null, error: 'Amount must be within a reasonable range' };
-    }
-    
-    return { isValid: true, value: numAmount, error: null };
+    return true;
 }
 
 /**
- * Validates a date string
- * @param {string} dateStr - The date string to validate (YYYY-MM-DD)
- * @returns {object} - Validation result with isValid and value properties
+ * Validates a date string in various formats
+ * @param {string} dateStr - The date string to validate
+ * @param {boolean} allowFuture - Whether future dates are allowed (default: true)
+ * @param {boolean} allowPast - Whether past dates are allowed (default: true)
+ * @returns {boolean} - Whether the date is valid
  */
-export function validateDate(dateStr) {
-    // Check if empty
-    if (!dateStr || typeof dateStr !== 'string') {
-        return { isValid: false, value: null, error: 'Date is required' };
-    }
+export function validateDate(dateStr, allowFuture = true, allowPast = true) {
+    if (!dateStr || typeof dateStr !== 'string') return false;
     
-    // Check format (YYYY-MM-DD)
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        return { isValid: false, value: null, error: 'Date must be in YYYY-MM-DD format' };
-    }
-    
-    // Try to create a date object
+    // Try to parse the date
     const date = new Date(dateStr);
     
-    // Check if it's a valid date
-    if (isNaN(date.getTime())) {
-        return { isValid: false, value: null, error: 'Invalid date' };
-    }
+    // Check if date is valid
+    if (isNaN(date.getTime())) return false;
     
-    // Check if it's not in the future
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
+    const now = new Date();
     
-    if (date > today) {
-        return { isValid: false, value: null, error: 'Date cannot be in the future' };
-    }
+    // Check if future dates are allowed
+    if (!allowFuture && date > now) return false;
     
-    return { isValid: true, value: date, error: null };
+    // Check if past dates are allowed
+    if (!allowPast && date < now) return false;
+    
+    return true;
 }
 
 /**
- * Validates an email address
- * @param {string} email - The email to validate
- * @returns {object} - Validation result with isValid and value properties
- */
-export function validateEmail(email) {
-    // Check if empty
-    if (!email || typeof email !== 'string') {
-        return { isValid: false, value: null, error: 'Email is required' };
-    }
-    
-    // Trim the email
-    const trimmedEmail = email.trim();
-    
-    // Check format with a more comprehensive regex
-    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-    
-    if (!emailRegex.test(trimmedEmail)) {
-        return { isValid: false, value: null, error: 'Invalid email format' };
-    }
-    
-    // Check length
-    if (trimmedEmail.length > 254) {
-        return { isValid: false, value: null, error: 'Email is too long' };
-    }
-    
-    return { isValid: true, value: trimmedEmail, error: null };
-}
-
-/**
- * Validates a name (first name, last name, etc.)
+ * Validates a name field
  * @param {string} name - The name to validate
- * @param {string} fieldName - The name of the field (for error message)
- * @returns {object} - Validation result with isValid and value properties
+ * @returns {boolean} - Whether the name is valid
  */
-export function validateName(name, fieldName = 'Name') {
-    // Check if empty
-    if (!name || typeof name !== 'string') {
-        return { isValid: false, value: null, error: `${fieldName} is required` };
-    }
+export function validateName(name) {
+    if (!name || typeof name !== 'string') return false;
     
-    // Trim the name
     const trimmedName = name.trim();
     
-    // Check if only empty spaces
-    if (trimmedName.length === 0) {
-        return { isValid: false, value: null, error: `${fieldName} cannot be empty` };
-    }
+    // Name must be between 2 and 50 characters
+    if (trimmedName.length < 2 || trimmedName.length > 50) return false;
     
-    // Check if contains invalid characters (numbers, special chars except hyphens and apostrophes)
-    if (!/^[A-Za-z\s'-]+$/.test(trimmedName)) {
-        return { isValid: false, value: null, error: `${fieldName} contains invalid characters` };
-    }
+    // Only allow letters, spaces, hyphens, and apostrophes
+    const nameRegex = /^[A-Za-z\s\-']+$/;
+    if (!nameRegex.test(trimmedName)) return false;
     
-    // Check length
-    if (trimmedName.length > 50) {
-        return { isValid: false, value: null, error: `${fieldName} is too long (maximum 50 characters)` };
-    }
+    // Don't allow names with only special characters or spaces
+    const hasLetters = /[A-Za-z]/.test(trimmedName);
+    if (!hasLetters) return false;
     
-    return { isValid: true, value: trimmedName, error: null };
+    return true;
 }
 
 /**
- * Validates a card number
- * @param {string} cardNumber - The card number to validate
- * @returns {object} - Validation result with isValid and value properties
+ * Validates a credit/debit card number using Luhn algorithm and pattern checking
+ * @param {string} cardNumber - The card number to validate (can include spaces, dashes)
+ * @returns {boolean} - Whether the card number is valid
  */
 export function validateCardNumber(cardNumber) {
-    // Check if empty
-    if (!cardNumber || typeof cardNumber !== 'string') {
-        return { isValid: false, value: null, error: 'Card number is required' };
-    }
+    if (!cardNumber || typeof cardNumber !== 'string') return false;
     
-    // Remove spaces and other non-numeric characters
-    const cleanedNumber = cardNumber.replace(/\D/g, '');
+    // Remove all non-digits
+    const digitsOnly = cardNumber.replace(/\D/g, '');
     
-    // Check if empty after cleaning
-    if (cleanedNumber.length === 0) {
-        return { isValid: false, value: null, error: 'Card number cannot be empty' };
-    }
+    // Check length: most cards are 13-19 digits
+    if (digitsOnly.length < 13 || digitsOnly.length > 19) return false;
     
-    // Check length (most card numbers are between 13-19 digits)
-    if (cleanedNumber.length < 8 || cleanedNumber.length > 19) {
-        return { isValid: false, value: null, error: 'Card number should be at least 8 digits' };
-    }
+    // Perform Luhn algorithm check
+    let sum = 0;
+    let shouldDouble = false;
     
-    // No Luhn algorithm check - just return valid
-    return { isValid: true, value: cleanedNumber, error: null };
-}
-
-/**
- * Displays validation errors on a form
- * @param {HTMLFormElement} form - The form element
- * @param {string} fieldName - The name of the field with error
- * @param {string} errorMessage - The error message to display
- */
-export function showValidationError(form, fieldName, errorMessage) {
-    // Find the field
-    const field = form.querySelector(`[name="${fieldName}"], #${fieldName}`);
-    if (!field) return;
-    
-    // Create or find error element
-    let errorElement = form.querySelector(`#${fieldName}-error`);
-    
-    if (!errorElement) {
-        errorElement = document.createElement('div');
-        errorElement.id = `${fieldName}-error`;
-        errorElement.className = 'validation-error';
-        errorElement.style.cssText = `
-            color: #ff3b30;
-            font-size: 0.8rem;
-            margin-top: 4px;
-            animation: fadeIn 0.3s ease;
-        `;
+    // Loop from right to left
+    for (let i = digitsOnly.length - 1; i >= 0; i--) {
+        let digit = parseInt(digitsOnly.charAt(i));
         
-        // Insert after the field or its parent form-group
-        const formGroup = field.closest('.form-group') || field.parentNode;
-        formGroup.appendChild(errorElement);
+        if (shouldDouble) {
+            digit *= 2;
+            if (digit > 9) digit -= 9;
+        }
+        
+        sum += digit;
+        shouldDouble = !shouldDouble;
     }
     
-    // Set the error message
-    errorElement.textContent = errorMessage;
-    
-    // Highlight the field
-    field.classList.add('error-input');
-    field.style.borderColor = '#ff3b30';
-    
-    // Add event listener to clear error when user types
-    field.addEventListener('input', function onInput() {
-        clearValidationError(form, fieldName);
-        field.removeEventListener('input', onInput);
-    }, { once: true });
+    // Valid cards have sum divisible by 10
+    return (sum % 10) === 0;
 }
 
 /**
- * Clears validation errors for a field
- * @param {HTMLFormElement} form - The form element
- * @param {string} fieldName - The name of the field to clear error for
+ * Shows validation error message for a form field
+ * @param {HTMLElement} inputElement - The input element with error
+ * @param {string} message - Error message to display
  */
-export function clearValidationError(form, fieldName) {
-    // Find the field
-    const field = form.querySelector(`[name="${fieldName}"], #${fieldName}`);
-    if (!field) return;
+export function showValidationError(inputElement, message) {
+    if (!inputElement) return;
     
-    // Find and remove error element
-    const errorElement = form.querySelector(`#${fieldName}-error`);
-    if (errorElement) {
+    // Remove any existing error
+    clearValidationError(inputElement);
+    
+    // Add error class to input
+    inputElement.classList.add('is-invalid');
+    
+    // Create error message element
+    const errorElement = document.createElement('div');
+    errorElement.className = 'invalid-feedback';
+    errorElement.textContent = message;
+    
+    // Insert after input
+    inputElement.parentNode.insertBefore(errorElement, inputElement.nextSibling);
+}
+
+/**
+ * Clears validation error for a specific input
+ * @param {HTMLElement} inputElement - The input element to clear errors for
+ */
+export function clearValidationError(inputElement) {
+    if (!inputElement) return;
+    
+    // Remove error class
+    inputElement.classList.remove('is-invalid');
+    
+    // Remove error message
+    const errorElement = inputElement.nextElementSibling;
+    if (errorElement && errorElement.className === 'invalid-feedback') {
         errorElement.remove();
     }
-    
-    // Remove error styling
-    field.classList.remove('error-input');
-    field.style.borderColor = '';
 }
 
 /**
- * Clears all validation errors on a form
- * @param {HTMLFormElement} form - The form element
+ * Clears all validation errors in a form
+ * @param {HTMLFormElement} form - The form to clear errors in
  */
 export function clearAllValidationErrors(form) {
-    // Remove all error messages
-    const errorElements = form.querySelectorAll('.validation-error');
-    errorElements.forEach(el => el.remove());
+    if (!form) return;
     
-    // Remove error styling from all fields
-    const errorFields = form.querySelectorAll('.error-input');
-    errorFields.forEach(field => {
-        field.classList.remove('error-input');
-        field.style.borderColor = '';
+    // Clear all error classes
+    const invalidInputs = form.querySelectorAll('.is-invalid');
+    invalidInputs.forEach(input => {
+        input.classList.remove('is-invalid');
     });
+    
+    // Remove all error messages
+    const errorMessages = form.querySelectorAll('.invalid-feedback');
+    errorMessages.forEach(message => {
+        message.remove();
+    });
+}
+
+/**
+ * A comprehensive input validator that applies multiple validation rules
+ * @param {string} input - The input to validate
+ * @param {Object} rules - Validation rules to apply
+ * @returns {Object} - Validation result with isValid flag and error message
+ */
+export function validateInput(input, rules = {}) {
+    // Default result
+    const result = {
+        isValid: true,
+        errorMessage: ''
+    };
+    
+    // If no input and it's required
+    if (rules.required && (!input || (typeof input === 'string' && input.trim() === ''))) {
+        result.isValid = false;
+        result.errorMessage = rules.requiredMessage || 'This field is required';
+        return result;
+    }
+    
+    // Skip further validation if input is empty and not required
+    if (!input || (typeof input === 'string' && input.trim() === '')) {
+        return result;
+    }
+    
+    // Type validation
+    if (rules.type) {
+        switch (rules.type) {
+            case 'email':
+                if (!isValidEmail(input)) {
+                    result.isValid = false;
+                    result.errorMessage = rules.typeMessage || 'Please enter a valid email address';
+                }
+                break;
+                
+            case 'password':
+                if (!isStrongPassword(input)) {
+                    result.isValid = false;
+                    result.errorMessage = rules.typeMessage || 'Password must contain at least 8 characters including uppercase, lowercase, numbers, and special characters';
+                }
+                break;
+                
+            case 'name':
+                if (!validateName(input)) {
+                    result.isValid = false;
+                    result.errorMessage = rules.typeMessage || 'Please enter a valid name';
+                }
+                break;
+                
+            case 'card':
+                if (!validateCardNumber(input)) {
+                    result.isValid = false;
+                    result.errorMessage = rules.typeMessage || 'Please enter a valid card number';
+                }
+                break;
+                
+            case 'amount':
+                if (!validateAmount(input, rules.min, rules.max)) {
+                    result.isValid = false;
+                    result.errorMessage = rules.typeMessage || `Amount must be between ${rules.min || 0} and ${rules.max || 1000000}`;
+                }
+                break;
+                
+            case 'date':
+                if (!validateDate(input, rules.allowFuture, rules.allowPast)) {
+                    result.isValid = false;
+                    result.errorMessage = rules.typeMessage || 'Please enter a valid date';
+                }
+                break;
+                
+            case 'text':
+            default:
+                // Basic text validation
+                break;
+        }
+    }
+    
+    // Length validation
+    if (result.isValid && rules.minLength && input.length < rules.minLength) {
+        result.isValid = false;
+        result.errorMessage = rules.minLengthMessage || `Must be at least ${rules.minLength} characters`;
+    }
+    
+    if (result.isValid && rules.maxLength && input.length > rules.maxLength) {
+        result.isValid = false;
+        result.errorMessage = rules.maxLengthMessage || `Must not exceed ${rules.maxLength} characters`;
+    }
+    
+    // Pattern validation
+    if (result.isValid && rules.pattern && !rules.pattern.test(input)) {
+        result.isValid = false;
+        result.errorMessage = rules.patternMessage || 'Invalid format';
+    }
+    
+    // Custom validation function
+    if (result.isValid && typeof rules.validate === 'function') {
+        const customValidation = rules.validate(input);
+        if (customValidation !== true) {
+            result.isValid = false;
+            result.errorMessage = customValidation || rules.validateMessage || 'Invalid input';
+        }
+    }
+    
+    return result;
 } 
