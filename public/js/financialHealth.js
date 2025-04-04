@@ -10,6 +10,7 @@ import {
     db,
     getDocs
 } from "./firestoredb.js";
+import { handleAPIError } from './helpers.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const financialHealthContent = document.getElementById('financial-health-content');
@@ -319,14 +320,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 const errorData = await response.json();
                 console.error('API response error:', errorData);
-                return defaultAnalysis();
+                const errorMessage = handleAPIError(errorData, response);
+                throw new Error(errorMessage);
             }
             
             const data = await response.json();
             
             if (data.error) {
                 console.error('API Error:', data.error);
-                return defaultAnalysis();
+                const errorMessage = handleAPIError(data.error);
+                throw new Error(errorMessage);
             }
             
             // Extract response text
@@ -358,6 +361,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error analyzing financial health:', error);
+            const errorMessage = handleAPIError(error);
+            showError(`Failed to analyze financial health: ${errorMessage}`);
             return defaultAnalysis();
         }
     }
@@ -470,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #ff3b30; margin-bottom: 1rem;"></i>
                 <p>${message}</p>
                 <button class="action-button" style="margin-top: 1rem;" onclick="location.reload()">
-                    <i class="fas fa-sync"></i> Reload
+                    <i class="fas fa-sync"></i> Retry
                 </button>
             </div>
         `;
