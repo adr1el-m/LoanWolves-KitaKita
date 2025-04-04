@@ -6,7 +6,17 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.5.0/firebase
 import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
 import { storeUserData } from "./firestoredb.js";
 import { firebaseConfig } from "./config.js";
-import { initEncryption, secureStorage, isValidEmail, isStrongPassword } from "./helpers.js";
+import { 
+  initEncryption, 
+  secureStorage, 
+  isValidEmail, 
+  isStrongPassword, 
+  validateName, 
+  sanitizeString,
+  showValidationError,
+  clearValidationError,
+  clearAllValidationErrors 
+} from "./helpers.js";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -45,9 +55,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Create a user data object
         const userData = {
-          firstName: user.displayName ? user.displayName.split(' ')[0] : '',
-          lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
-          email: user.email,
+          firstName: sanitizeString(user.displayName ? user.displayName.split(' ')[0] : ''),
+          lastName: sanitizeString(user.displayName ? user.displayName.split(' ').slice(1).join(' ') : ''),
+          email: sanitizeString(user.email),
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString(),
           accountStatus: 'active',
@@ -83,10 +93,13 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   const form = document.querySelector('.auth-form');
+  const firstNameInput = document.getElementById('firstName');
+  const lastNameInput = document.getElementById('lastName');
+  const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
   const confirmPasswordInput = document.getElementById('confirmPassword');
   
-  // Password validation
+  // Password validation requirements in the UI
   const reqLength = document.getElementById('req-length');
   const reqCriteria = document.getElementById('req-criteria');
   const reqLowercase = document.getElementById('req-lowercase');
@@ -94,16 +107,23 @@ document.addEventListener('DOMContentLoaded', function() {
   const reqNumbers = document.getElementById('req-numbers');
   const reqSpecial = document.getElementById('req-special');
   
-  passwordInput.addEventListener('input', validatePassword);
-  
-  function validatePassword() {
+  // Function to validate password and update UI indicators
+  function validatePasswordUI() {
     const password = passwordInput.value;
+    
+    if (!password) {
+      // Reset all indicators when password is empty
+      [reqLength, reqCriteria, reqLowercase, reqUppercase, reqNumbers, reqSpecial].forEach(el => {
+        el.classList.remove('requirement-met', 'requirement-unmet');
+      });
+      return;
+    }
     
     // Check length
     const hasLength = password.length >= 8;
     toggleRequirement(reqLength, hasLength);
     
-    // Check criteria
+    // Check character types
     const hasLowercase = /[a-z]/.test(password);
     const hasUppercase = /[A-Z]/.test(password);
     const hasNumbers = /[0-9]/.test(password);
@@ -118,8 +138,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const criteriaCount = [hasLowercase, hasUppercase, hasNumbers, hasSpecial].filter(Boolean).length;
     const hasCriteria = criteriaCount >= 3;
     toggleRequirement(reqCriteria, hasCriteria);
+    
+    // For common patterns check
+    if (hasLength && hasCriteria) {
+      // Check for common patterns and dictionary words
+      const commonPatterns = [
+        '12345678', '87654321', 'password', 'qwerty', 'abc123',
+        'admin123', 'letmein', 'welcome', 'monkey', 'football'
+      ];
+      
+      const lowercasePassword = password.toLowerCase();
+      let hasCommonPattern = false;
+      
+      for (const pattern of commonPatterns) {
+        if (lowercasePassword.includes(pattern)) {
+          hasCommonPattern = true;
+          break;
+        }
+      }
+      
+      if (hasCommonPattern) {
+        showValidationError(passwordInput, "Password contains a common pattern that's easy to guess");
+      } else {
+        clearValidationError(passwordInput);
+      }
+    }
   }
   
+  // Show requirement status in UI
   function toggleRequirement(element, isMet) {
     if (isMet) {
       element.classList.add('requirement-met');
@@ -130,33 +176,105 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+  // Add input validation event listeners 
+  passwordInput.addEventListener('input', validatePasswordUI);
+  confirmPasswordInput.addEventListener('input', function() {
+    // Check if passwords match
+    if (passwordInput.value && confirmPasswordInput.value) {
+      if (passwordInput.value !== confirmPasswordInput.value) {
+        showValidationError(confirmPasswordInput, "Passwords do not match");
+      } else {
+        clearValidationError(confirmPasswordInput);
+      }
+    }
+  });
+  
+  // Input validation for other fields
+  firstNameInput.addEventListener('input', function() {
+    if (firstNameInput.value && !validateName(firstNameInput.value)) {
+      showValidationError(firstNameInput, "Please enter a valid first name");
+    } else {
+      clearValidationError(firstNameInput);
+    }
+  });
+  
+  lastNameInput.addEventListener('input', function() {
+    if (lastNameInput.value && !validateName(lastNameInput.value)) {
+      showValidationError(lastNameInput, "Please enter a valid last name");
+    } else {
+      clearValidationError(lastNameInput);
+    }
+  });
+  
+  emailInput.addEventListener('input', function() {
+    if (emailInput.value && !isValidEmail(emailInput.value)) {
+      showValidationError(emailInput, "Please enter a valid email address");
+    } else {
+      clearValidationError(emailInput);
+    }
+  });
+  
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
     
-    const firstNameInput = document.getElementById('firstName');
-    const lastNameInput = document.getElementById('lastName');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
+    // Clear any previous validation errors
+    clearAllValidationErrors(form);
     
-    // Basic validation
-    if (!firstNameInput.value.trim() || !lastNameInput.value.trim()) {
-      alert("Please enter your full name");
-      return;
+    // Validate all fields
+    let hasErrors = false;
+    
+    // First Name validation
+    if (!firstNameInput.value.trim()) {
+      showValidationError(firstNameInput, "First name is required");
+      hasErrors = true;
+    } else if (!validateName(firstNameInput.value)) {
+      showValidationError(firstNameInput, "Please enter a valid first name");
+      hasErrors = true;
     }
     
-    if (!isValidEmail(emailInput.value)) {
-      alert("Please enter a valid email address");
-      return;
+    // Last Name validation
+    if (!lastNameInput.value.trim()) {
+      showValidationError(lastNameInput, "Last name is required");
+      hasErrors = true;
+    } else if (!validateName(lastNameInput.value)) {
+      showValidationError(lastNameInput, "Please enter a valid last name");
+      hasErrors = true;
     }
     
-    if (!isStrongPassword(passwordInput.value)) {
-      alert("Password must be at least 8 characters long and include uppercase, lowercase, number, and special character");
-      return;
+    // Email validation
+    if (!emailInput.value.trim()) {
+      showValidationError(emailInput, "Email is required");
+      hasErrors = true;
+    } else if (!isValidEmail(emailInput.value)) {
+      showValidationError(emailInput, "Please enter a valid email address");
+      hasErrors = true;
     }
     
-    if (passwordInput.value !== confirmPasswordInput.value) {
-      alert("Passwords do not match");
+    // Password validation
+    if (!passwordInput.value) {
+      showValidationError(passwordInput, "Password is required");
+      hasErrors = true;
+    } else if (!isStrongPassword(passwordInput.value)) {
+      showValidationError(passwordInput, "Password doesn't meet the security requirements");
+      hasErrors = true;
+    }
+    
+    // Confirm Password validation
+    if (!confirmPasswordInput.value) {
+      showValidationError(confirmPasswordInput, "Please confirm your password");
+      hasErrors = true;
+    } else if (passwordInput.value !== confirmPasswordInput.value) {
+      showValidationError(confirmPasswordInput, "Passwords do not match");
+      hasErrors = true;
+    }
+    
+    // If there are validation errors, don't submit
+    if (hasErrors) {
+      // Scroll to the first error
+      const firstError = form.querySelector('.is-invalid');
+      if (firstError) {
+        firstError.focus();
+      }
       return;
     }
     
@@ -165,59 +283,73 @@ document.addEventListener('DOMContentLoaded', function() {
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
     
-    createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value)
-      .then(async (userCredential) => {
-        // Signed up 
-        const user = userCredential.user;
-        
-        // Initialize encryption with user ID (now just compatibility)
-        await initEncryption(user.uid);
-        
-        // Create a user data object
-        const userData = {
-          firstName: firstNameInput.value,
-          lastName: lastNameInput.value,
-          email: emailInput.value,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          accountStatus: 'active',
-          securityLevel: 'standard'
-        };
-        
-        // Store in Firestore
-        storeUserData(user.uid, userData)
-          .then(async () => {
-            // Also store in secure storage for quick access - updated
-            await secureStorage.setItem('userData', userData);
-            secureStorage.setSecureCookie('auth_session', 'authenticated', 1);
-            alert("Account created successfully!");
-            window.location.href = "login.html"; // Redirect to login page
-          })
-          .catch(error => {
-            console.error("Error saving user data:", error);
-            alert("Account created but there was an issue saving your profile information.");
-            window.location.href = "login.html";
-          });
-      })
-      .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        
-        // Reset the button
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonText;
-        
-        // Error handling for common errors
-        switch (errorCode) {
-          case 'auth/email-already-in-use':
-            alert("This email is already registered. Please login instead.");
-            break;
-          case 'auth/weak-password':
-            alert("Password is too weak. Please choose a stronger password.");
-            break;
-          default:
-            alert(errorMessage);
-        }
-      });
+    try {
+      // Create account in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        sanitizeString(emailInput.value), 
+        passwordInput.value // Don't sanitize password as it would alter it
+      );
+      
+      const user = userCredential.user;
+      
+      // Initialize encryption with user ID (now just compatibility)
+      await initEncryption(user.uid);
+      
+      // Create a sanitized user data object
+      const userData = {
+        firstName: sanitizeString(firstNameInput.value),
+        lastName: sanitizeString(lastNameInput.value),
+        email: sanitizeString(emailInput.value),
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        accountStatus: 'active',
+        securityLevel: 'standard'
+      };
+      
+      // Store in Firestore
+      await storeUserData(user.uid, userData);
+      
+      // Also store in secure storage for quick access - updated
+      await secureStorage.setItem('userData', userData);
+      secureStorage.setSecureCookie('auth_session', 'authenticated', 1);
+      
+      // Show success message
+      alert("Account created successfully!");
+      
+      // Redirect to login page
+      window.location.href = "login.html"; 
+      
+    } catch (error) {
+      // Reset the button
+      submitButton.disabled = false;
+      submitButton.innerHTML = originalButtonText;
+      
+      // Error handling for common errors
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          showValidationError(emailInput, "This email is already registered. Please login instead.");
+          emailInput.focus();
+          break;
+        case 'auth/weak-password':
+          showValidationError(passwordInput, "Firebase considers this password too weak. Please choose a stronger password.");
+          passwordInput.focus();
+          break;
+        case 'auth/invalid-email':
+          showValidationError(emailInput, "The email address is not valid.");
+          emailInput.focus();
+          break;
+        case 'auth/operation-not-allowed':
+          alert("Email/password accounts are not enabled. Please contact support.");
+          break;
+        case 'auth/network-request-failed':
+          alert("Network error. Please check your internet connection and try again.");
+          break;
+        default:
+          alert(`Error creating account: ${error.message}`);
+      }
+      
+      console.error("Account creation error:", error);
+    }
   });
 });
