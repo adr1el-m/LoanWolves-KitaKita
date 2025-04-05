@@ -594,11 +594,27 @@ async function loadYamanScoutContent() {
             return;
         }
         
-        // Calculate total balance across all accounts
+        // Calculate financial metrics
         console.log("Calculating financial metrics...");
+        
+        // Get spending categories from transactions
+        const spendingCategories = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((acc, t) => {
+                const category = t.category || 'other';
+                acc[category] = (acc[category] || 0) + Math.abs(parseFloat(t.amount || 0));
+                return acc;
+            }, {});
+            
+        // Convert to array and sort by amount
+        const topCategories = Object.entries(spendingCategories)
+            .map(([category, amount]) => ({ category, amount }))
+            .sort((a, b) => b.amount - a.amount)
+            .slice(0, 5);
+        
+        // Calculate total balance across all accounts
         const totalBalance = accounts.reduce((total, account) => {
             const balance = parseFloat(account.balance || 0);
-            console.log(`Account balance: ${balance}`);
             return total + balance;
         }, 0);
         
@@ -619,11 +635,11 @@ async function loadYamanScoutContent() {
         // Calculate monthly income and expenses
         const monthlyIncome = monthlyTransactions
             .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+            .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount || 0)), 0);
             
         const monthlyExpenses = monthlyTransactions
             .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+            .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount || 0)), 0);
         
         console.log("Monthly income:", monthlyIncome);
         console.log("Monthly expenses:", monthlyExpenses);
@@ -650,7 +666,8 @@ async function loadYamanScoutContent() {
             totalAccounts: accounts.length,
             roi,
             riskScore,
-            diversificationIndex
+            diversificationIndex,
+            topCategories
         };
         
         console.log("Financial data prepared:", financialData);
@@ -659,11 +676,14 @@ async function loadYamanScoutContent() {
         console.log("Generating investment recommendations...");
         const recommendations = await generateInvestmentRecommendations(financialData);
         
-        if (!recommendations || (!recommendations.opportunities && !recommendations.insights && !recommendations.marketTrends)) {
-            throw new Error("Invalid recommendations data received");
-        }
+        // Ensure recommendations object has all required properties
+        const safeRecommendations = {
+            opportunities: recommendations?.opportunities || [],
+            insights: recommendations?.insights || [],
+            marketTrends: recommendations?.marketTrends || []
+        };
         
-        console.log("Recommendations generated successfully");
+        console.log("Recommendations processed:", safeRecommendations);
         
         // Generate content with the analysis results
         contentContainer.innerHTML = `
@@ -733,97 +753,105 @@ async function loadYamanScoutContent() {
                     </div>
                 </div>
 
-                <div class="market-trends">
-                    <div class="section-header">
-                        <i class="fas fa-chart-pie"></i>
-                        <h3>Market Trends & Opportunities</h3>
-                        <span class="subtitle">3-5 Year Market Outlook</span>
-                    </div>
-                    <div class="trends-grid">
-                        ${recommendations.marketTrends.map(trend => `
-                            <div class="trend-card">
-                                <div class="trend-sector">
-                                    <i class="fas ${getTrendIcon(trend.sector)}"></i>
-                                    ${trend.sector}
+                ${safeRecommendations.marketTrends.length > 0 ? `
+                    <div class="market-trends">
+                        <div class="section-header">
+                            <i class="fas fa-chart-pie"></i>
+                            <h3>Market Trends & Opportunities</h3>
+                            <span class="subtitle">3-5 Year Market Outlook</span>
+                        </div>
+                        <div class="trends-grid">
+                            ${safeRecommendations.marketTrends.map(trend => `
+                                <div class="trend-card">
+                                    <div class="trend-sector">
+                                        <i class="fas ${getTrendIcon(trend.sector)}"></i>
+                                        ${trend.sector}
+                                    </div>
+                                    <div class="trend-outlook">${trend.outlook}</div>
+                                    <div class="trend-relevance">
+                                        <i class="fas fa-user-check"></i>
+                                        <span>${trend.relevanceToUser}</span>
+                                    </div>
                                 </div>
-                                <div class="trend-outlook">${trend.outlook}</div>
-                                <div class="trend-relevance">
-                                    <i class="fas fa-user-check"></i>
-                                    <span>${trend.relevanceToUser}</span>
-                                </div>
-                            </div>
-                        `).join('')}
+                            `).join('')}
+                        </div>
                     </div>
-                </div>
+                ` : ''}
 
-                <div class="investment-opportunities">
-                    <div class="section-header">
-                        <i class="fas fa-bullseye"></i>
-                        <h3>Personalized Investment Opportunities</h3>
-                        <span class="subtitle">Tailored to Your Financial Profile</span>
-                    </div>
-                    <div class="opportunities-grid">
-                        ${recommendations.opportunities.map(opportunity => `
-                            <div class="opportunity-card ${opportunity.futureGrowthPotential ? 'future-' + opportunity.futureGrowthPotential.toLowerCase() : ''}">
-                                <div class="opportunity-header">
-                                    <div class="opportunity-icon">
-                                        <i class="fas ${opportunity.icon}"></i>
-                                    </div>
-                                    <div class="opportunity-info">
-                                        <div class="opportunity-title">${opportunity.title}</div>
-                                        ${opportunity.futureGrowthPotential ? 
-                                            `<div class="growth-potential ${opportunity.futureGrowthPotential.toLowerCase()}">
-                                                ${opportunity.futureGrowthPotential} Growth Potential
-                                            </div>` : ''
-                                        }
-                                    </div>
-                                </div>
-                                <div class="opportunity-details">
-                                    ${opportunity.details.map(detail => `
-                                        <div class="detail-row ${detail.label === 'Future Outlook' ? 'future-outlook' : ''}">
-                                            <span class="detail-label">${detail.label}</span>
-                                            <span class="detail-value">${detail.value}</span>
+                ${safeRecommendations.opportunities.length > 0 ? `
+                    <div class="investment-opportunities">
+                        <div class="section-header">
+                            <i class="fas fa-bullseye"></i>
+                            <h3>Personalized Investment Opportunities</h3>
+                            <span class="subtitle">Tailored to Your Financial Profile</span>
+                        </div>
+                        <div class="opportunities-grid">
+                            ${safeRecommendations.opportunities.map(opportunity => `
+                                <div class="opportunity-card ${opportunity.futureGrowthPotential ? 'future-' + opportunity.futureGrowthPotential.toLowerCase() : ''}">
+                                    <div class="opportunity-header">
+                                        <div class="opportunity-icon">
+                                            <i class="fas ${opportunity.icon}"></i>
                                         </div>
-                                    `).join('')}
+                                        <div class="opportunity-info">
+                                            <div class="opportunity-title">${opportunity.title}</div>
+                                            ${opportunity.futureGrowthPotential ? 
+                                                `<div class="growth-potential ${opportunity.futureGrowthPotential.toLowerCase()}">
+                                                    ${opportunity.futureGrowthPotential} Growth Potential
+                                                </div>` : ''
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="opportunity-details">
+                                        ${opportunity.details.map(detail => `
+                                            <div class="detail-row ${detail.label === 'Future Outlook' ? 'future-outlook' : ''}">
+                                                <span class="detail-label">${detail.label}</span>
+                                                <span class="detail-value">${detail.value}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    ${opportunity.tags ? `
+                                        <div class="opportunity-tags">
+                                            ${opportunity.tags.map(tag => `
+                                                <span class="tag">${tag}</span>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
                                 </div>
-                                <div class="opportunity-tags">
-                                    ${opportunity.tags.map(tag => `
-                                        <span class="tag">${tag}</span>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        `).join('')}
+                            `).join('')}
+                        </div>
                     </div>
-                </div>
+                ` : ''}
 
-                <div class="market-insights">
-                    <div class="section-header">
-                        <i class="fas fa-brain"></i>
-                        <h3>AI-Powered Market Insights</h3>
-                        <span class="subtitle">Based on Your Financial Behavior</span>
-                    </div>
-                    <div class="insights-grid">
-                        ${recommendations.insights.map(insight => `
-                            <div class="insight-card ${insight.type}">
-                                <div class="insight-header">
-                                    <div class="insight-icon">
-                                        <i class="fas ${insight.icon}"></i>
+                ${safeRecommendations.insights.length > 0 ? `
+                    <div class="market-insights">
+                        <div class="section-header">
+                            <i class="fas fa-brain"></i>
+                            <h3>AI-Powered Market Insights</h3>
+                            <span class="subtitle">Based on Your Financial Behavior</span>
+                        </div>
+                        <div class="insights-grid">
+                            ${safeRecommendations.insights.map(insight => `
+                                <div class="insight-card ${insight.type}">
+                                    <div class="insight-header">
+                                        <div class="insight-icon">
+                                            <i class="fas ${insight.icon}"></i>
+                                        </div>
+                                        <div class="insight-info">
+                                            <div class="insight-title">${insight.title}</div>
+                                            ${insight.timeHorizon ? 
+                                                `<div class="time-horizon">
+                                                    <i class="fas fa-clock"></i>
+                                                    ${insight.timeHorizon}
+                                                </div>` : ''
+                                            }
+                                        </div>
                                     </div>
-                                    <div class="insight-info">
-                                        <div class="insight-title">${insight.title}</div>
-                                        ${insight.timeHorizon ? 
-                                            `<div class="time-horizon">
-                                                <i class="fas fa-clock"></i>
-                                                ${insight.timeHorizon}
-                                            </div>` : ''
-                                        }
-                                    </div>
+                                    <div class="insight-description">${insight.description}</div>
                                 </div>
-                                <div class="insight-description">${insight.description}</div>
-                            </div>
-                        `).join('')}
+                            `).join('')}
+                        </div>
                     </div>
-                </div>
+                ` : ''}
             </div>
         `;
         
