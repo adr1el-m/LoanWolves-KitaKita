@@ -1121,6 +1121,19 @@ document.getElementById('add-bank-form').addEventListener('submit', async functi
 
         // Prepare account data
         const accountId = `acc_${Date.now()}`;
+        let accountName;
+        
+        if (accountTypeField?.value === 'ewallet') {
+            const ewalletProvider = document.getElementById('ewallet-provider');
+            if (ewalletProvider.value === 'other') {
+                accountName = document.getElementById('other-provider')?.value?.trim() || 'E-Wallet';
+            } else {
+                accountName = ewalletProvider.options[ewalletProvider.selectedIndex].text;
+            }
+        } else {
+            accountName = bankNameField?.value?.trim() || 'My Account';
+        }
+
         const accountData = {
             id: accountId,
             accountType: accountTypeField?.value || 'bank',
@@ -1130,7 +1143,7 @@ document.getElementById('add-bank-form').addEventListener('submit', async functi
             balance: balance,
             createdAt: new Date().toISOString(),
             userId: user.uid,
-            accountName: bankNameField?.value?.trim() || 'My Account'
+            accountName: accountName
         };
 
         // Store in Firestore
