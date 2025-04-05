@@ -38,45 +38,47 @@ function validateUserAccess(requestUserId) {
 
 // Store user data in Firestore
 export async function storeUserData(userId, userData) {
-  try {
-    // Validate user is authorized to modify this data
-    validateUserAccess(userId);
-    
-    // Adding additional fields if they don't exist
-    const defaultData = {
-      accountStatus: userData.accountStatus || 'active',
-      lastLogin: userData.lastLogin || new Date().toISOString(),
-      securityLevel: userData.securityLevel || 'standard',
-      hasPassword: userData.hasPassword || false,
-      preferences: userData.preferences || {
-        notifications: true,
-        twoFactorAuth: false,
-        theme: 'dark'
-      },
-      financialProfile: userData.financialProfile || {
-        accountType: 'personal',
-        creditScore: null,
-        riskProfile: null,
-        employmentStatus: null,
-        monthlyIncome: null,
-        employmentHistory: [],
-        documents: {}
-      }
-    };
-
-    // Merge default data with provided userData
-    const enrichedUserData = { ...userData, ...defaultData };
-    
-    // Add userId to data for security verification in rules
-    enrichedUserData.userId = userId;
-    
-    await setDoc(doc(db, "users", userId), enrichedUserData);
-    console.log("User data stored in Firestore!");
-    return true;
-  } catch (error) {
-    console.error("Error storing user data in Firestore: ", error);
-    return false;
-  }
+    try {
+        console.log('Starting storeUserData...'); // Debug log
+        
+        // Validate user is authorized to modify this data
+        try {
+            validateUserAccess(userId);
+            console.log('User access validated'); // Debug log
+        } catch (authError) {
+            console.error('Authorization error:', authError);
+            throw new Error('Authorization failed: ' + authError.message);
+        }
+        
+        // Get existing user data first
+        try {
+            const docRef = doc(db, "users", userId);
+            const docSnap = await getDoc(docRef);
+            const existingData = docSnap.exists() ? docSnap.data() : {};
+            console.log('Retrieved existing data:', existingData); // Debug log
+            
+            // Merge the data
+            const enrichedUserData = {
+                ...existingData,
+                ...userData,
+                userId,
+                updatedAt: new Date().toISOString()
+            };
+            
+            console.log('Attempting to save data:', enrichedUserData); // Debug log
+            
+            // Store the merged data
+            await setDoc(docRef, enrichedUserData);
+            console.log('Data successfully saved to Firestore'); // Debug log
+            return true;
+        } catch (firestoreError) {
+            console.error('Firestore operation error:', firestoreError);
+            throw new Error('Database error: ' + firestoreError.message);
+        }
+    } catch (error) {
+        console.error('storeUserData error:', error);
+        throw error; // Propagate the detailed error
+    }
 }
 
 // Retrieve user data from Firestore

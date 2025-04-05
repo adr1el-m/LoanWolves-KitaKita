@@ -1949,47 +1949,53 @@
         // Function to load personal profile data
         async function loadPersonalProfileData() {
             try {
-                // Import necessary functions
                 const { getUserData } = await import('../js/firestoredb.js');
-                const user = window.auth.currentUser;
+                const user = auth.currentUser;
                 
                 if (!user) {
                     console.error('No user logged in');
                     return;
                 }
                 
-                // Get user data from Firestore
                 const userData = await getUserData(user.uid);
+                console.log('Loaded user data:', userData); // Debug log
+                
                 if (userData) {
-                    // Populate form fields with user data
-                    document.getElementById('firstName').value = userData.firstName || '';
-                    document.getElementById('lastName').value = userData.lastName || '';
-                    document.getElementById('email').value = userData.email || user.email || '';
-                    document.getElementById('phone').value = userData.phone || '';
-                    document.getElementById('address').value = userData.address || '';
+                    // Define all fields to update
+                    const fields = {
+                        'firstName': userData.firstName || '',
+                        'lastName': userData.lastName || '',
+                        'email': userData.email || '',
+                        'phone': userData.phone || '',
+                        'address': userData.address || '', // Ensure address is loaded
+                        'employment': userData.employmentDetails?.status || 'unemployed'
+                    };
                     
-                    // Handle employment details
-                    if (userData.employmentDetails) {
-                        document.getElementById('employment').value = userData.employmentDetails.status || 'employed';
-                        document.getElementById('employer').value = userData.employmentDetails.employer || '';
+                    // Update all form fields
+                    Object.entries(fields).forEach(([id, value]) => {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.value = value;
+                        }
+                    });
+                    
+                    // Handle employer field visibility and value
+                    const employerField = document.getElementById('employer');
+                    const employerContainer = document.getElementById('employer-container');
+                    
+                    if (fields.employment === 'employed' || fields.employment === 'self-employed') {
+                        employerContainer?.classList.remove('d-none');
+                        if (employerField && userData.employmentDetails?.employer) {
+                            employerField.value = userData.employmentDetails.employer;
+                        }
+                    } else {
+                        employerContainer?.classList.add('d-none');
+                        if (employerField) {
+                            employerField.value = '';
+                        }
                     }
                     
-                    // Handle employer field visibility based on employment status
-                    const employmentSelect = document.getElementById('employment');
-                    const employerGroup = document.getElementById('employer-group');
-                    
-                    if (employmentSelect && employerGroup) {
-                        employerGroup.style.display = 
-                            (employmentSelect.value === 'employed' || employmentSelect.value === 'self-employed') 
-                            ? 'block' : 'none';
-                            
-                        // Add event listener to handle visibility when selection changes
-                        employmentSelect.addEventListener('change', function() {
-                            employerGroup.style.display = 
-                                (this.value === 'employed' || this.value === 'self-employed') 
-                                ? 'block' : 'none';
-                        });
-                    }
+                    console.log('Personal profile data loaded successfully'); // Debug log
                 }
             } catch (error) {
                 console.error('Error loading personal profile data:', error);
@@ -2075,92 +2081,91 @@
         // Add form submission handlers
         document.getElementById('personal-form')?.addEventListener('submit', async function(e) {
             e.preventDefault();
+            e.stopPropagation();
+            
+            // Store the current scroll position
+            const currentScroll = window.scrollY;
+            
+            // Store button state
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
             
             try {
+                // Check internet connection first
+                if (!navigator.onLine) {
+                    throw new Error('No internet connection. Please check your connection and try again.');
+                }
+
                 // Import necessary functions
                 const { getUserData, storeUserData } = await import('../js/firestoredb.js');
                 const { validateName, validateEmail, sanitizeString, showValidationError, clearAllValidationErrors } = await import('../js/helpers.js');
-                const user = window.auth.currentUser;
+                const user = auth.currentUser;
                 
                 if (!user) {
-                    console.error('No user logged in');
-                    alert('You must be logged in to update your information.');
-                    return;
+                    throw new Error('You must be logged in to update your information.');
                 }
                 
                 // Clear any previous validation errors
                 clearAllValidationErrors(this);
                 
-                // Get and validate form values
-                // Validate first name
-                const firstNameValidation = validateName(document.getElementById('firstName').value, 'First name');
-                if (!firstNameValidation.isValid) {
-                    showValidationError(this, 'firstName', firstNameValidation.error);
-                    document.getElementById('firstName').focus();
-                    return;
-                }
+                // Update button state
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
                 
-                // Validate last name
-                const lastNameValidation = validateName(document.getElementById('lastName').value, 'Last name');
-                if (!lastNameValidation.isValid) {
-                    showValidationError(this, 'lastName', lastNameValidation.error);
-                    document.getElementById('lastName').focus();
-                    return;
-                }
-                
-                // Validate email
-                const emailValidation = validateEmail(document.getElementById('email').value);
-                if (!emailValidation.isValid) {
-                    showValidationError(this, 'email', emailValidation.error);
-                    document.getElementById('email').focus();
-                    return;
-                }
-                
-                // Get other form values
+                // Get form elements
+                const firstNameElement = document.getElementById('firstName');
+                const lastNameElement = document.getElementById('lastName');
+                const emailElement = document.getElementById('email');
                 const phoneElement = document.getElementById('phone');
                 const addressElement = document.getElementById('address');
                 const employmentElement = document.getElementById('employment');
                 const employerElement = document.getElementById('employer');
                 
-                // Validate phone (optional but must be in valid format if provided)
-                const phone = phoneElement.value.trim();
-                if (phone && !/^(\+\d{1,3})?[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/.test(phone)) {
-                    showValidationError(this, 'phone', 'Invalid phone number format');
-                    phoneElement.focus();
-                    return;
+                // Validate first name
+                const firstNameValidation = validateName(firstNameElement.value, 'First name');
+                if (!firstNameValidation.isValid) {
+                    showValidationError(firstNameElement, firstNameValidation.error);
+                    throw new Error(firstNameValidation.error);
                 }
                 
-                // Validate address (optional)
+                // Validate last name
+                const lastNameValidation = validateName(lastNameElement.value, 'Last name');
+                if (!lastNameValidation.isValid) {
+                    showValidationError(lastNameElement, lastNameValidation.error);
+                    throw new Error(lastNameValidation.error);
+                }
+                
+                // Validate email
+                const emailValidation = validateEmail(emailElement.value);
+                if (!emailValidation.isValid) {
+                    showValidationError(emailElement, emailValidation.error);
+                    throw new Error(emailValidation.error);
+                }
+                
+                // Get and sanitize other values
+                const phone = phoneElement.value.trim();
                 const address = addressElement.value.trim();
-                
-                // Get employment status
                 const employment = employmentElement.value;
-                
-                // Validate employer if employed or self-employed
                 let employer = '';
+                
+                // Validate employer if employed/self-employed
                 if (employment === 'employed' || employment === 'self-employed') {
                     employer = employerElement.value.trim();
                     if (!employer) {
-                        showValidationError(this, 'employer', 'Employer name is required');
-                        employerElement.focus();
-                        return;
-                    } else if (employer.length > 100) {
-                        showValidationError(this, 'employer', 'Employer name too long (maximum 100 characters)');
-                        employerElement.focus();
-                        return;
+                        showValidationError(employerElement, 'Employer name is required');
+                        throw new Error('Employer name is required');
                     }
                 }
                 
-                // Show loading state
-                const submitButton = this.querySelector('button[type="submit"]');
-                const originalButtonText = submitButton.innerHTML;
-                submitButton.disabled = true;
-                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                // Get current user data first
+                let userData = await getUserData(user.uid);
                 
-                // Get current user data
-                const userData = await getUserData(user.uid);
+                // If no existing data, create a new object
                 if (!userData) {
-                    throw new Error('Failed to retrieve user data');
+                    userData = {
+                        userId: user.uid,
+                        createdAt: new Date().toISOString()
+                    };
                 }
                 
                 // Update the user data with sanitized values
@@ -2178,26 +2183,42 @@
                     updatedAt: new Date().toISOString()
                 };
                 
-                // Store the updated data in Firestore
-                const success = await storeUserData(user.uid, updatedUserData);
+                console.log('Attempting to save user data:', updatedUserData); // Debug log
                 
-                if (success) {
+                try {
+                    // Store the updated data in Firestore
+                    await storeUserData(user.uid, updatedUserData);
+                    
+                    // If we get here, the save was successful
                     // Update localStorage for immediate UI updates
                     localStorage.setItem('userData', JSON.stringify(updatedUserData));
                     
-                    // Show success message
+                    // Update the UI immediately
+                    const welcomeElement = document.getElementById('welcomeUsername');
+                    const userDisplayName = document.getElementById('user-display-name');
+                    if (welcomeElement) welcomeElement.textContent = updatedUserData.firstName;
+                    if (userDisplayName) userDisplayName.textContent = `${updatedUserData.firstName} ${updatedUserData.lastName}`;
+                    
+                    // Show success messages
+                    alert('Your information has been saved successfully!');
                     showSuccessMessage('Personal information updated successfully!');
-                } else {
-                    throw new Error('Failed to update user data');
+                } catch (saveError) {
+                    console.error('Error saving to Firestore:', saveError);
+                    throw new Error(`Failed to save: ${saveError.message}`);
                 }
             } catch (error) {
                 console.error('Error updating personal information:', error);
-                showErrorMessage('Error updating information: ' + error.message);
+                // Show a more specific error message
+                const errorMessage = error.message.includes('Firestore error') 
+                    ? error.message 
+                    : 'Error saving your information. Please try again.';
+                alert(errorMessage);
+                showErrorMessage(errorMessage);
             } finally {
-                // Restore button state
-                const submitButton = this.querySelector('button[type="submit"]');
-                submitButton.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+                // Restore button state and scroll position
                 submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+                window.scrollTo(0, currentScroll);
             }
         });
 

@@ -711,14 +711,20 @@ document.getElementById('add-transaction-button').addEventListener('click', func
 
 // Close transaction modal
 document.getElementById('close-add-transaction').addEventListener('click', function(e) {
-    e.preventDefault(); // Prevent default button behavior
+    e.preventDefault();
     const modal = document.getElementById('add-transaction-modal');
     modal.style.display = 'none';
     
-    // Reset the form when closing
+    // Reset the form
     const form = document.getElementById('add-transaction-form');
     if (form) {
         form.reset();
+        // Reset submit button if it's in loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Add Transaction';
+        }
         // Clear any validation errors
         clearAllValidationErrors(form);
     }
@@ -749,41 +755,53 @@ document.getElementById('add-transaction-form').addEventListener('submit', async
         const notesField = document.getElementById('transaction-notes');
         const accountField = document.getElementById('transaction-account');
         
+        // Store original button state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        
+        // Update button to loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
         // Validate name (required)
         if (!nameField || !nameField.value.trim()) {
             showValidationError(nameField, 'Transaction name is required');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
             return;
         }
         
         // Validate amount (required, must be a number)
         if (!amountField || !amountField.value.trim()) {
             showValidationError(amountField, 'Amount is required');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
             return;
         }
         
         const amount = parseFloat(amountField.value.trim());
         if (isNaN(amount)) {
             showValidationError(amountField, 'Please enter a valid amount');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
             return;
         }
         
         // Validate account selection (can be "no_account" now)
         if (!accountField || (!accountField.value && accountField.value !== "no_account")) {
             showValidationError(accountField, 'Please select an account or "No Account"');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
             return;
         }
         
         // Validate date (required)
         if (!dateField || !dateField.value) {
             showValidationError(dateField, 'Date is required');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
             return;
         }
-
-        // Submit button state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalBtnText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
         // Only update account balance if an actual account is selected
         if (accountField.value !== "no_account") {
@@ -859,7 +877,7 @@ document.getElementById('add-transaction-form').addEventListener('submit', async
         const submitBtn = this.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = originalBtnText;
+            submitBtn.innerHTML = 'Add Transaction';
         }
     }
 });
