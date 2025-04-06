@@ -2,7 +2,106 @@
 
 ## Overview
 
-Kita-Kita is an innovative AI-powered banking platform that combines secure financial services with intelligent chatbot assistance. Built with modern web technologies and Firebase integration, it provides a seamless and secure banking experience for users.
+Kita-Kita is an innovative AI-powered banking platform that combines secure financial services with intelligent chatbot assistance. Our platform features six specialized AI companions that work together to provide comprehensive financial management and security.
+
+## 🌟 Core Features
+
+### 🤖 The Kita Companions
+
+1. **Gabay Gastos**
+
+   - Advanced AI financial behavior analysis
+   - Intelligent spending pattern detection
+   - Real-time spending insights and analytics
+   - Features:
+     - Monthly spending overview with trend analysis
+     - Category-based expense tracking
+     - Savings rate monitoring
+     - Recurring expense identification
+     - AI-powered personalized insights
+     - Smart budget recommendations
+
+2. **Dunong Puhunan**
+
+   - Investment trend analysis
+   - Market opportunity identification
+   - Portfolio performance tracking
+   - Features:
+     - Sector-specific trend monitoring
+     - Investment recommendations
+     - Risk-adjusted return analysis
+     - Market insights and alerts
+
+3. **Bantay Utang**
+
+   - Comprehensive financial metrics analysis
+   - Income stability assessment
+   - Credit behavior monitoring
+   - Features:
+     - Income source categorization
+     - Expense pattern analysis
+     - Cash flow volatility tracking
+     - Loan recommendations
+     - Budget insights
+     - Payment history analysis
+
+4. **Iwas Scam**
+
+   - AI-powered fraud detection
+   - Transaction pattern monitoring
+   - Security risk assessment
+   - Features:
+     - Real-time transaction monitoring
+     - Location-based security checks
+     - Merchant category monitoring
+     - Device and session tracking
+     - Risk scoring system
+     - Security recommendations
+
+5. **Tiwala Score**
+
+   - Credit score optimization
+   - Payment history tracking
+   - Financial behavior analysis
+   - Features:
+     - Credit analysis engine
+     - Payment history monitoring
+     - Income stability tracking
+     - Saving habits assessment
+     - Smart budget creation
+     - Automatic payment setup
+
+6. **Patunay Check**
+   - KYC (Know Your Customer) management
+   - Regulatory compliance monitoring
+   - Document verification system
+   - Features:
+     - Document validity tracking
+     - Compliance status monitoring
+     - Required action notifications
+     - Income-based requirements
+     - Security status overview
+     - Document verification workflow
+
+### 📊 Financial Health Analysis
+
+Our platform provides comprehensive financial health monitoring:
+
+- **Real-time Analytics**: Continuous monitoring of all financial activities
+- **Risk Assessment**: Multi-factor risk analysis across all companions
+- **Personalized Insights**: AI-driven recommendations based on your specific financial patterns
+- **Security Monitoring**: Integrated security and fraud prevention
+- **Compliance Tracking**: Automated regulatory compliance monitoring
+
+### 💬 AI-Powered Integration
+
+Each companion features:
+
+- **Natural Language Processing**: Understanding complex financial queries
+- **Contextual Awareness**: Remembers your preferences and history
+- **Real-time Updates**: Instant notifications for important events
+- **Cross-companion Communication**: Integrated insights across all tools
+- **Secure Authentication**: Protected access to sensitive financial data
 
 ## 🚀 Features
 
