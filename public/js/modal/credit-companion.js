@@ -730,21 +730,41 @@ class CreditAnalysisEngine {
     async analyzeAccountHealth() {
         const balances = this.accounts.map(a => parseFloat(a.balance) || 0);
         const totalBalance = balances.reduce((sum, balance) => sum + balance, 0);
-        const averageBalance = totalBalance / this.accounts.length;
+        const averageBalance = totalBalance / this.accounts.length || 0;
 
-        const monthlyExpenses = this.calculateAverageMonthlyExpenses();
-        const monthsOfRunway = totalBalance / monthlyExpenses;
+        const monthlyExpenses = this.calculateAverageMonthlyExpenses() || 1; // Prevent division by zero
+        const monthsOfRunway = totalBalance / monthlyExpenses || 0;
         
+        // Recalibrated scoring system
         let score = 0;
-        score += Math.min(monthsOfRunway * 20, 40); // Up to 40 points for runway
-        score += Math.min((averageBalance / 10000) * 30, 30); // Up to 30 points for balance
-        score += this.accounts.length * 10; // 10 points per account up to 30
+        
+        // Emergency fund score (40 points max)
+        // 6+ months: 40 points
+        // 3-6 months: 20-40 points
+        // 1-3 months: 10-20 points
+        // <1 month: 0-10 points
+        if (monthsOfRunway >= 6) score += 40;
+        else if (monthsOfRunway >= 3) score += 20 + ((monthsOfRunway - 3) / 3) * 20;
+        else if (monthsOfRunway >= 1) score += 10 + ((monthsOfRunway - 1) / 2) * 10;
+        else score += Math.min(monthsOfRunway * 10, 10);
+        
+        // Account balance score (30 points max)
+        // Use monthly income as a reference point
+        const monthlyIncome = this.calculateAverageMonthlyIncome() || 1;
+        const balanceToIncomeRatio = totalBalance / monthlyIncome;
+        score += Math.min(balanceToIncomeRatio * 10, 30);
+        
+        // Account diversity score (30 points max)
+        // 3+ accounts: 30 points
+        // 2 accounts: 20 points
+        // 1 account: 10 points
+        score += Math.min(this.accounts.length * 10, 30);
 
         return {
-            score: Math.min(score, 100),
+            score: Math.min(Math.max(Math.round(score), 0), 100), // Ensure score is between 0-100
             totalBalance,
             averageBalance,
-            monthsOfRunway,
+            monthsOfRunway: Math.max(monthsOfRunway, 0), // Prevent negative months
             accountDiversity: this.accounts.length,
             status: this.getStatusFromScore(score)
         };
@@ -759,14 +779,22 @@ class CreditAnalysisEngine {
             account_health: this.analysis.accountHealth.score * weights.account_health
         };
 
+        // Calculate base score (0-100)
         const baseScore = Object.values(weightedScores).reduce((sum, score) => sum + score, 0);
+        
+        // Convert to credit score range (300-850)
+        // Base score of 0 maps to 300
+        // Base score of 100 maps to 850
         const finalScore = Math.round(300 + (baseScore / 100) * 550);
+        
+        // Ensure the score stays within valid range
+        const boundedScore = Math.min(Math.max(finalScore, 300), 850);
 
         return {
-            score: finalScore,
+            score: boundedScore,
             factors: this.analysis,
             weightedScores,
-            rating: this.getCreditRating(finalScore),
+            rating: this.getCreditRating(boundedScore),
             recommendations: this.generateRecommendations()
         };
     }

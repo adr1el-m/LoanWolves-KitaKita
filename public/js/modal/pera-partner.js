@@ -792,7 +792,7 @@ class FinancialMetricsAnalyzer {
         const discretionarySpending = this.calculateDiscretionarySpending(expenseCategories);
 
         return {
-            monthly: monthlyExpenses,
+            monthly: Math.abs(monthlyExpenses),
             categories: expenseCategories,
             discretionary: discretionarySpending,
             patterns: this.analyzeExpensePatterns(expenseTransactions)
@@ -874,7 +874,7 @@ class FinancialMetricsAnalyzer {
     calculateMonthlyAverage(transactions) {
         const monthlyTotals = this.groupTransactionsByMonth(transactions);
         const values = Object.values(monthlyTotals);
-        return values.length > 0 ? this.calculateMean(values) : 0;
+        return values.length > 0 ? Math.abs(this.calculateMean(values)) : 0;
     }
 
     groupTransactionsByMonth(transactions) {
@@ -882,7 +882,7 @@ class FinancialMetricsAnalyzer {
         transactions.forEach(transaction => {
             const date = new Date(transaction.date);
             const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-            monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + parseFloat(transaction.amount);
+            monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + Math.abs(parseFloat(transaction.amount));
         });
         return monthlyTotals;
     }
@@ -1377,7 +1377,7 @@ async function loadPeraPartnerContent() {
 
         const monthlyExpenses = monthlyTransactions
             .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+            .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount || 0)), 0);
 
         // Calculate debt-to-income ratio
         const debtToIncomeRatio = monthlyIncome > 0 ? (monthlyExpenses / monthlyIncome) : 1;
@@ -1610,7 +1610,7 @@ function formatIncomeLevel(level) {
 function generateBudgetInsight(income, expenses, incomeLevel) {
     if (income <= 0) return "Please update your income information for personalized budget insights.";
     
-    const savingsRate = (income - expenses) / income;
+    const savingsRate = (income - Math.abs(expenses)) / income;
     let recommendations = '';
     
     if (savingsRate < 0) {
@@ -1629,7 +1629,7 @@ function generateBudgetInsight(income, expenses, incomeLevel) {
             recommendations += " Focus on building an emergency fund of at least ₱15,000 before considering loans.";
             break;
         case 'lower-middle':
-            recommendations += " Consider maintaining an emergency fund of 3 months' expenses (around ₱" + (expenses * 3).toLocaleString() + ").";
+            recommendations += " Consider maintaining an emergency fund of 3 months' expenses (around ₱" + (Math.abs(expenses) * 3).toLocaleString() + ").";
             break;
         case 'middle':
             recommendations += " Explore investment options to grow your wealth alongside maintaining an emergency fund.";

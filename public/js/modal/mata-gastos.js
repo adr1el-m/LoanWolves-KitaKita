@@ -267,24 +267,6 @@ function generateInsights(transactions, userData) {
     const expenseToIncomeRatio = monthlyIncome ? (totalSpending / monthlyIncome) : 1;
     const categories = getExpenseCategoryBreakdown(transactions);
     
-    // Check if there's sufficient transaction data
-    if (transactions.length < 3) {
-        insights.push(createInsightCard(
-            'neutral',
-            'fa-info-circle',
-            'More Data Needed',
-            'Add more transactions to receive personalized insights. We need at least 3 transactions to identify meaningful patterns.'
-        ));
-        
-        return insights.join('');
-    }
-    
-    // Analyze spending patterns
-    const spendingPatterns = analyzeSpendingPatterns(transactions);
-    const frequentMerchants = identifyFrequentMerchants(transactions);
-    const weekdaySpending = analyzeWeekdaySpending(transactions);
-    const spendingTrend = calculateSpendingTrend(transactions);
-    
     // DYNAMIC INSIGHTS BASED ON ACTUAL DATA PATTERNS
     
     // Income vs Spending Analysis
@@ -336,51 +318,6 @@ function generateInsights(transactions, userData) {
         ));
     }
     
-    // Time-pattern insights
-    if (weekdaySpending.highestDay) {
-        insights.push(createInsightCard(
-            'neutral',
-            'fa-calendar-day',
-            'Spending Pattern Detected',
-            `Your spending is highest on ${weekdaySpending.highestDay}s (${weekdaySpending.highestPercentage.toFixed(0)}% of weekly expenses). Consider planning ahead for these higher-spending days.`
-        ));
-    }
-    
-    // Merchant-specific insights
-    if (frequentMerchants.length > 0) {
-        const topMerchant = frequentMerchants[0];
-        insights.push(createInsightCard(
-            'neutral',
-            'fa-store',
-            'Frequent Merchant Detected',
-            `You've made ${topMerchant.count} transactions at ${topMerchant.name}, spending ₱${formatAmount(topMerchant.total)}. Consider negotiating discounts or rewards for your loyalty.`
-        ));
-    }
-    
-    // Unusual expenses
-    const unusualExpense = findUnusualExpense(transactions);
-    if (unusualExpense) {
-        insights.push(createInsightCard(
-            'warning',
-            'fa-search-dollar',
-            'Unusual Expense Detected',
-            `Your recent ${unusualExpense.name} expense of ₱${formatAmount(unusualExpense.amount)} is ${unusualExpense.percentHigher}% higher than your average for similar transactions.`
-        ));
-    }
-    
-    // Savings potential
-    if (monthlyIncome > 0 && expenseToIncomeRatio < 0.9) {
-        const monthlySavings = monthlyIncome - totalSpending;
-        const annualSavings = monthlySavings * 12;
-        
-        insights.push(createInsightCard(
-            'positive',
-            'fa-piggy-bank',
-            'Savings Projection',
-            `At your current rate, you could save ₱${formatAmount(annualSavings)} over the next year. Consider setting specific savings goals for these funds.`
-        ));
-    }
-    
     // Emergency fund analysis
     const emergencyFundMonths = totalBalance / (totalSpending > 0 ? totalSpending : monthlyIncome);
     if (emergencyFundMonths < 3) {
@@ -399,7 +336,8 @@ function generateInsights(transactions, userData) {
         ));
     }
     
-    // Spending trend insight
+    // Analyze spending trends
+    const spendingTrend = calculateSpendingTrend(transactions);
     if (spendingTrend !== 0) {
         const trendDirection = spendingTrend > 0 ? 'increased' : 'decreased';
         const trendIcon = spendingTrend > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
@@ -413,17 +351,40 @@ function generateInsights(transactions, userData) {
         ));
     }
     
-    // Default insight if none generated
-    if (insights.length === 0) {
-        insights.push(createInsightCard(
-            'neutral',
-            'fa-chart-line',
-            'Building Your Financial Profile',
-            'We\'re analyzing your financial patterns. Add more diverse transactions to receive more tailored insights.'
-        ));
+    // Analyze recurring expenses
+    const recurringExpenses = identifyRecurringExpenses(transactions);
+    if (recurringExpenses.length > 0) {
+        const totalRecurring = recurringExpenses.reduce((sum, exp) => sum + exp.averageAmount, 0);
+        if (totalRecurring > (monthlyIncome * 0.4)) {
+            insights.push(createInsightCard(
+                'warning',
+                'fa-calendar-alt',
+                'High Recurring Expenses',
+                `Your recurring expenses of ₱${formatAmount(totalRecurring)} represent ${((totalRecurring/monthlyIncome)*100).toFixed(0)}% of your income. Consider reviewing these commitments.`
+            ));
+        }
     }
     
-    // Return top 3 most relevant insights to avoid overwhelming the user
+    // If no insights were generated, provide a basic financial health overview
+    if (insights.length === 0) {
+        if (transactions.length > 0) {
+            insights.push(createInsightCard(
+                'neutral',
+                'fa-chart-line',
+                'Financial Overview',
+                `Your total spending this month is ₱${formatAmount(totalSpending)}. ${monthlyIncome > 0 ? `This represents ${(expenseToIncomeRatio * 100).toFixed(0)}% of your monthly income.` : ''}`
+            ));
+        } else {
+            insights.push(createInsightCard(
+                'neutral',
+                'fa-chart-line',
+                'Welcome to Financial Insights',
+                'Start tracking your transactions to receive personalized financial insights and recommendations.'
+            ));
+        }
+    }
+    
+    // Return top 3 most relevant insights
     return insights.slice(0, 3).join('');
 }
 

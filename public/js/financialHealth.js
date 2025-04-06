@@ -121,20 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const transactions = await getUserTransactions(user.uid) || [];
             
             // If there are accounts but no transactions, return basic account data
-            // This allows financial health to work with just accounts
             if (transactions.length === 0) {
                 return {
                     totalBalance,
                     accounts: accounts.length,
                     monthlyIncome: 0,
                     monthlyExpenses: 0,
-                    savingsRate: 0,
-                    hasOnlyAccounts: true, // Flag to indicate only account data exists
+                    hasOnlyAccounts: true,
                     expenseCategories: []
                 };
             }
             
-            // The rest of the function for when there are both accounts and transactions
             // Calculate monthly income and expenses
             const today = new Date();
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -160,9 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const category = t.category || 'other';
                     expenseCategories[category] = (expenseCategories[category] || 0) + Math.abs(parseFloat(t.amount || 0));
                 });
-            
-            // Calculate savings rate
-            const savingsRate = monthlyIncome > 0 ? (monthlyIncome - monthlyExpenses) / monthlyIncome * 100 : 0;
             
             // Format categories for analysis
             const formattedCategories = Object.entries(expenseCategories)
@@ -190,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 accounts: accounts.length,
                 monthlyIncome,
                 monthlyExpenses,
-                savingsRate,
                 expenseCategories: formattedCategories,
                 recentTransactions: monthlyTransactions.slice(0, 5),
                 largeExpenses
@@ -203,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function analyzeFinancialHealth(userData) {
         try {
-            // Check if there's already a cached analysis to prevent constant API calls
+            // Check if there's already a cached analysis
             const cachedAnalysis = sessionStorage.getItem('financialHealthAnalysis');
             if (cachedAnalysis) {
                 return JSON.parse(cachedAnalysis);
@@ -217,13 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     insights: [
                         {type: "positive", text: `Your account balance of ₱${userData.totalBalance.toFixed(2)} is a good starting point for financial tracking.`},
                         {type: "opportunity", text: "Start recording your income and expenses to gain insights into your spending patterns."},
-                        {type: "neutral", text: "Regular transaction tracking will help identify areas where you can save more effectively."}
+                        {type: "neutral", text: "Regular transaction tracking will help identify areas where you can optimize your spending."}
                     ],
-                    suggestion: "Add your next income or expense transaction to start building your financial profile.",
-                    nextStep: "Set up at least one recurring transaction to track your monthly income source."
+                    suggestion: "Add your next income or expense transaction to start building your financial profile."
                 };
                 
-                // Cache this basic analysis
                 sessionStorage.setItem('financialHealthAnalysis', JSON.stringify(basicAnalysis));
                 return basicAnalysis;
             }
@@ -244,7 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
             Number of Accounts: ${userData.accounts}
             Monthly Income: ₱${userData.monthlyIncome.toFixed(2)}
             Monthly Expenses: ₱${userData.monthlyExpenses.toFixed(2)}
-            Savings Rate: ${userData.savingsRate.toFixed(1)}%
             
             Top expense categories:
             ${userData.expenseCategories.slice(0, 3).map(c => 
@@ -254,18 +244,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             Please provide a PERSONALIZED financial health analysis with the following elements:
             1. A financial health score from 0-100 based on:
-               - Savings rate (above 20% is excellent, below 5% is concerning)
-               - Expense-to-income ratio
+               - Expense-to-income ratio (below 70% is good)
                - Account balance relative to monthly expenses
                - Diversification of spending
+               - Presence of large unusual expenses
 
-            2. A brief status description (1 sentence) that specifically mentions their key financial strength or weakness
+            2. A brief status description (1 sentence) that specifically mentions their key financial strength or area for improvement
 
             3. Provide 2-4 specific, personalized insights directly referencing:
-               - Their actual savings rate and how it compares to recommended 15-20%
+               - Their expense-to-income ratio and how it compares to recommended levels
                - Their highest spending category and whether it's appropriate
-               - A recommendation based on their specific financial situation
-               - Any other relevant observation about their financial situation
+               - Their account balance relative to monthly expenses
+               - Any other relevant observation about their spending patterns
 
             4. Label each insight as:
                - "positive" for good habits or achievements
@@ -275,21 +265,18 @@ document.addEventListener('DOMContentLoaded', () => {
                - "opportunity" for growth potential based on their specific situation
 
             5. Include one practical, actionable suggestion that directly addresses their largest expense category or lowest financial score area
-            
-            6. Add one specific "next steps" recommendation that's achievable within the next 30 days
 
             Format your response as valid JSON with the following structure:
             {
                 "score": 85,
-                "status": "Your finances are in good shape with a strong 24% savings rate",
+                "status": "Your expense management is strong with a 65% expense-to-income ratio",
                 "insights": [
-                    {"type": "positive", "text": "Your savings rate of 24% exceeds the recommended 15-20% threshold, creating good financial resilience."},
+                    {"type": "positive", "text": "Your expense-to-income ratio of 65% is within the recommended range."},
                     {"type": "warning", "text": "Housing expenses at 45% of your income are significantly higher than the recommended 30% maximum."},
-                    {"type": "opportunity", "text": "With your consistent income, you're well-positioned to start an emergency fund of 3-6 months of expenses."},
-                    {"type": "negative", "text": "Your current debt-to-income ratio of 42% is above the recommended 36% maximum."}
+                    {"type": "opportunity", "text": "With your current balance covering 2 months of expenses, consider building this to 3-6 months."},
+                    {"type": "negative", "text": "Your discretionary spending has increased 25% compared to last month."}
                 ],
-                "suggestion": "To reduce your high housing costs, consider a roommate, refinancing, or negotiating rent at renewal time.",
-                "nextStep": "Start tracking all food expenses with categories to identify where you can trim 10% from your second-highest spending area."
+                "suggestion": "To reduce your high housing costs, consider a roommate or negotiating rent at renewal time."
             }
             
             Make ALL insights and suggestions highly specific to their actual financial data. Reference actual numbers from their data. Avoid generic advice.
@@ -379,9 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 {type: "neutral", text: "Review your monthly expenses to identify potential savings opportunities."},
                 {type: "warning", text: "Watch your spending in discretionary categories to improve your overall financial health."}
             ],
-            // Removed hardcoded suggestion and nextStep - will be generated by AI when possible
-            suggestion: "",
-            nextStep: ""
+            suggestion: ""
         };
     }
     
@@ -432,13 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="suggestion-container" style="background-color: rgba(16, 223, 111, 0.1); border-left: 4px solid #10df6f; padding: 15px; margin: 15px 0; border-radius: 4px;">
                     <h3><i class="fas fa-lightbulb" style="color: #10df6f;"></i> Action Step</h3>
                     <p>${analysis.suggestion}</p>
-                </div>
-            ` : ''}
-            
-            ${analysis.nextStep ? `
-                <div class="next-step-container" style="background-color: rgba(33, 150, 243, 0.1); border-left: 4px solid #2196F3; padding: 15px; margin: 15px 0; border-radius: 4px;">
-                    <h3><i class="fas fa-arrow-right" style="color: #2196F3;"></i> Next Step</h3>
-                    <p>${analysis.nextStep}</p>
                 </div>
             ` : ''}
         `;
